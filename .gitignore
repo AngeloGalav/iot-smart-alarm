@@ -1,2 +1,3 @@
 utils/*.exe
 utils/*.bin
+esp32/dfplayermini.py

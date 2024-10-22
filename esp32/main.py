@@ -1,11 +1,11 @@
-import time
-import machine
-pwm = machine.PWM(machine.Pin(2))
-pwm.freq(120)
-while True:
-    for i in range(1024):
-        pwm.duty(i)
-        time.sleep(0.001)
-    for i in range(1023, -1, -1):
-        pwm.duty(i)
-        time.sleep(0.001)
+from dfplayermini import Player
+
+from time import sleep
+
+music = Player(pin_TX=32, pin_RX=26)
+
+music.volume(50)
+music.play(1)
+sleep(10)
+
+music.module_sleep()
