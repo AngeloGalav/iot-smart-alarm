@@ -1,0 +1,123 @@
+/* General Styles */
+@import url('https://fonts.googleapis.com/css2?family=Gloock&display=swap');
+
+.gloock-regular {
+  text-shadow: 2px 2px 10px rgb(255, 0, 212);
+  font-family: "Gloock", serif;
+  font-weight: 400;
+  font-style: normal;
+  color: rgb(192, 169, 36);
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+  }
+  
+  /* Navbar Styles */
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #1a1a1a;
+    padding: 0.5rem 2rem;
+    color: #fff;
+  }
+  
+  /* Logo */
+  .navbar-logo {
+    font-size: 2rem;
+    font-weight: bold;
+    /* color: #fff; */
+    text-decoration: none;
+
+    display: flex; /* Establishes this div as a flex container */
+    align-items: center; /* Vertically centers the flex items if the heights differ */
+    gap: 10px; /* Optional: adds space between the image and the text */
+  }
+  .logo {
+    width: 40px; height: auto;
+  }
+  .navbar-button {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+    text-decoration: none;
+  }
+  
+/* From Uiverse.io by iZOXVL */ 
+.navbar-button {
+    padding: 10px 20px;
+    border: 2px solid #2c2c2c;
+    background-color: #333;
+    color: #ffffff;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 30px;
+    transition: all 0.4s ease;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+    font-weight: bold;
+  }
+  
+  .navbar-button::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(255, 255, 255, 0) 70%
+    );
+    transform: scale(0);
+    transition: transform 0.5s ease;
+  }
+  
+  .navbar-button:hover::after {
+    transform: scale(4);
+  }
+  
+  .navbar-button:hover {
+    border-color: #972f89;
+    background: #5e1454;
+  }
+  
+  
+  
+  /* Links */
+  .navbar-links {
+    list-style: none;
+    display: flex;
+    gap: 1.5rem;
+  }
+  
+  .navbar-links li a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1rem;
+  }
+  
+  .navbar-links li a:hover {
+    color: #feb47b;
+  }
+  
+  /* Toggle Button for Mobile */
+  .navbar-toggle {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
+  
+  .bar {
+    width: 25px;
+    height: 3px;
+    background-color: #fff;
+    margin: 4px 0;
+    transition: 0.4s;
+  }
