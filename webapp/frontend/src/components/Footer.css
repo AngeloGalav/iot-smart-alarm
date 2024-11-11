@@ -6,3 +6,9 @@
     text-align: center;
     position: absolute;
   }
+
+.gh {
+  margin: auto;
+  margin-top: 1rem;
+  max-width: 1em;
+}

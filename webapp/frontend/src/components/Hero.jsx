@@ -16,7 +16,7 @@ const Hero = () => {
   };
 
   return (
-    <div>
+    <div className="flex-grow container mx-auto p-4">
       <nav className="my-navbar m-1">
       <div>
       <h1 className="text-3xl font-bold">Alarm Manager</h1>
@@ -26,7 +26,7 @@ const Hero = () => {
       </button>
     </nav>
 
-      <div className="p-6 bg-base-300 min-h-screen text-center space-y-6">
+      <div className="p-6 bg-base-300 min-h-full mt-4 rounded-2xl text-center space-y-6">
         <div className="space-y-4">
           {alarms.length > 0 ? (
             alarms.map((alarm) => (

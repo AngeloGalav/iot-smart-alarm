@@ -1,13 +1,13 @@
 import './App.css';
 import Hero from './components/Hero';
-import Footer from './components/Footer';
+import MyFooter from './components/Footer';
 
 
 function App() {
   return (
-    <div className="App">
+    <div className="flex flex-col min-h-screen">
       <Hero />
-      <Footer />
+      <MyFooter />
     </div>
   );
 }
