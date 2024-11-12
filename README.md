@@ -1,4 +1,4 @@
-# Pending
+# iot-smart-alarm
 
 <p align="center">
   <img src="res//image.png" alt="Robot Alarm" width="400px"/>
