@@ -1,3 +1,4 @@
 utils/*.exe
 utils/*.bin
 esp32/dfplayermini.py
+esp32/secrets.py
