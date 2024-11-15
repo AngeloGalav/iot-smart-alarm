@@ -35,11 +35,11 @@
 - [ ] evaluation metrics
 
 - [ ] Frontend
-  - [ ] Fix footer and make it design coherent with the design of the app (and smaller)
-  - [ ] Fix logo and about button (navbar) to make it design compatible with the rest of the frontend
-    - [ ] move button to top left
+  - [x] Fix footer and make it design coherent with the design of the app (and smaller)
+  - [x] Fix logo and about button (navbar) to make it design compatible with the rest of the frontend
+    - [x] move button to top left
   - [ ] Add dashboard
-  - [ ] alarm periodicity (based on day of the week)
+  - [x] alarm periodicity (based on day of the week)
 
 - [ ] Telegram Bot
   - [ ] Do bot

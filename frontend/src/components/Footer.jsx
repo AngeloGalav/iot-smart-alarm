@@ -1,7 +1,6 @@
 import './Footer.css'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Footer.js
-import { FaBeer, FaGithub } from 'react-icons/fa';
+import { FaGithub } from 'react-icons/fa';
 
 
 const MyFooter = () => {
