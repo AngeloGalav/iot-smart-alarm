@@ -24,7 +24,7 @@
 - [ ] Data proxy
   - [ ] write server code, which receives data from the esp32 and sends it to influxdb
   - [ ] integrate it with the webapp
-  - [ ] weather api integration
+  - [x] weather api integration
 
 - [ ] influxdb
   - [ ] setup influxdb instance to collect data
