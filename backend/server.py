@@ -6,11 +6,12 @@ In the future it will also serve as the backend for the webapp and the esp32. Go
 import paho.mqtt.client as mqtt
 from weather_utils import get_weather_data
 import json
+import os
 import time
 
 # MQTT configuration
-mqtt_broker_host = "0.0.0.0"
-mqtt_broker_port = 1883 # default mqtt port
+MQTT_BROKER_HOST = os.getenv('MQTT_BROKER_HOST', 'localhost')
+MQTT_BROKER_PORT = int(os.getenv('MQTT_BROKER_PORT', 1883))
 sensor_data_topic = "sensor/data"
 alarm_control_topic = "alarm/control"
 
@@ -39,9 +40,12 @@ def on_message(client, userdata, msg):
             print("Alarm stopped.")
 
 # callback for when the MQTT client connects to the broker
-def on_connect(client, userdata, flags, rc):
-    print(f"Connected to MQTT broker with result code {rc}")
+# mqttv5 requires the properties code
+def on_connect(client, userdata, flags, reasonCode, properties=None):
+    global connected
+    print(f"Connected to MQTT broker with reason code {reasonCode}")
     client.subscribe([(sensor_data_topic, 0), (alarm_control_topic, 0)])
+    connected = True
 
 def main():
     global alarm_triggered
@@ -52,11 +56,11 @@ def main():
 
     while not connected:
         try:
-            mqtt_client.connect(mqtt_broker_host, mqtt_broker_port, 60)
+            mqtt_client.connect(MQTT_BROKER_HOST, MQTT_BROKER_PORT, 60)
             # loop start calls loop, which allows a "looping" connection
             # on a different thread
             mqtt_client.loop_start()
-            time.sleep(2)  
+            time.sleep(2)
         except Exception as e:
             print(f"Connection attempt failed: {e}")
             time.sleep(5)  # Wait before retrying
