@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+
+  back-server:
+    build:
+      context: ./backend
+    container_name: iot-backend-server
+    depends_on:
+      - mqtt-broker
+    volumes:
+      - ./backend:/app
+    environment:
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    container_name: mqtt-broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./broker/data:/mosquitto/data
+      - ./broker/log:/mosquitto/log
+      - ./broker/config:/mosquitto/config
+
+  iot-frontend:
+    build:
+      context: ./frontend
+    container_name: iot-frontend-react
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mqtt-broker
+    environment:
+      - REACT_APP_MQTT_BROKER_HOST=mqtt-broker
+      - REACT_APP_MQTT_BROKER_PORT=1883
