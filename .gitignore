@@ -2,3 +2,5 @@ utils/*.exe
 utils/*.bin
 esp32/dfplayermini.py
 esp32/secrets.py
+docs/IOT2024-4.pdf
+**/__pycache__

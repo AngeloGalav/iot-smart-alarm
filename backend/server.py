@@ -3,46 +3,82 @@ This python script only gets the weather for the next our.
 In the future it will also serve as the backend for the webapp and the esp32. Godo.
 """
 
-import requests
+import paho.mqtt.client as mqtt
+from weather_utils import get_weather_data
+import json
+import time
 
-latitude = 43.6158
-longitude = 13.5189
+# MQTT configuration
+mqtt_broker_host = "0.0.0.0"
+mqtt_broker_port = 1883 # default mqtt port
+sensor_data_topic = "sensor/data"
+alarm_control_topic = "alarm/control"
 
-parameters = {
-    'latitude': latitude,
-    'longitude': longitude,
-    'hourly': 'temperature_2m,precipitation_probability,cloudcover',
-    'start': 'auto',
-    'end': 'next1hours',
-    'timezone': 'auto'
-}
+# flags
+alarm_triggered = False
+connected = False
 
-api_url = 'https://api.open-meteo.com/v1/forecast'
+# callback for when a message is received
+def on_message(client, userdata, msg):
+    global alarm_triggered
 
-response = requests.get(api_url, params=parameters)
+    topic = msg.topic
+    payload = json.loads(msg.payload.decode())
 
-if response.status_code == 200:
-    data = response.json()
-    hourly_data = data.get('hourly', {})
+    if topic == sensor_data_topic:
+        print(f"Received sensor data: {payload}")
+        # TODO: store payload
 
-    time = hourly_data.get('time', [])[0]
-    temperature = hourly_data.get('temperature_2m', [])[0]
-    precipitation_probability = hourly_data.get('precipitation_probability', [])[0]
-    cloud_cover = hourly_data.get('cloudcover', [])[0]
+    elif topic == alarm_control_topic:
+        command = payload.get("command")
+        if command == "trigger_alarm":
+            alarm_triggered = True
+            print("Alarm triggered! Notifying microcontroller.")
+        elif command == "stop_alarm":
+            alarm_triggered = False
+            print("Alarm stopped.")
 
-    if precipitation_probability > 50:
-        weather_condition = "Rainy"
-    elif cloud_cover < 30:
-        weather_condition = "Sunny"
-    elif cloud_cover >= 30 and cloud_cover <= 70:
-        weather_condition = "Partly Cloudy"
-    else:
-        weather_condition = "Cloudy"
+# callback for when the MQTT client connects to the broker
+def on_connect(client, userdata, flags, rc):
+    print(f"Connected to MQTT broker with result code {rc}")
+    client.subscribe([(sensor_data_topic, 0), (alarm_control_topic, 0)])
 
-    print(f"Forecast for {time}:")
-    print(f"Temperature: {temperature}°C")
-    print(f"Precipitation Probability: {precipitation_probability}%")
-    print(f"Cloud Cover: {cloud_cover}%")
-    print(f"Weather Condition: {weather_condition}")
-else:
-    print(f"Failed to retrieve data, status code: {response.status_code}")
+def main():
+    global alarm_triggered
+
+    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
+
+    while not connected:
+        try:
+            mqtt_client.connect(mqtt_broker_host, mqtt_broker_port, 60)
+            # loop start calls loop, which allows a "looping" connection
+            # on a different thread
+            mqtt_client.loop_start()
+            time.sleep(2)  
+        except Exception as e:
+            print(f"Connection attempt failed: {e}")
+            time.sleep(5)  # Wait before retrying
+
+    try:
+        print("Fetching weather data and listening for MQTT messages...")
+        mqtt_client.loop_start()
+
+        while True:
+            # fetch weather data periodically
+            weather_data = get_weather_data()
+            if weather_data:
+                print(f"Weather data: {weather_data}")
+
+            if alarm_triggered:
+                print("!!! ALARM TRIGGERED !!! User needs to get up.")
+
+    except KeyboardInterrupt:
+        print("Shutting down...")
+    finally:
+        mqtt_client.loop_stop()
+        mqtt_client.disconnect()
+
+if __name__ == '__main__' :
+    main()
