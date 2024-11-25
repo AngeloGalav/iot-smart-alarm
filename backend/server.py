@@ -40,8 +40,6 @@ influx_client = InfluxDBClient(
 )
 write_api = influx_client.write_api(write_options=WriteOptions(batch_size=1))
 
-
-
 # callback for when a message is received
 def on_message(client, userdata, msg):
     global alarm_triggered
@@ -108,12 +106,14 @@ def main():
 
         while True:
             # fetch weather data periodically
-            weather_data = get_weather_data()
-            if weather_data:
-                print(f"Weather data: {weather_data}")
+            print("running...")
+            time.sleep(10)
+            # weather_data = get_weather_data()
+            # if weather_data:
+            #     print(f"Weather data: {weather_data}")
 
-            if alarm_triggered:
-                print("!!! ALARM TRIGGERED !!! User needs to get up.")
+            # if alarm_triggered:
+            #     print("!!! ALARM TRIGGERED !!! User needs to get up.")
 
     except KeyboardInterrupt:
         print("Shutting down...")

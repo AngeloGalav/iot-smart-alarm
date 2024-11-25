@@ -1,6 +1,6 @@
 services:
 
-  back-server:
+  iot-backend-server:
     build:
       context: ./backend
     container_name: iot-backend-server
@@ -63,3 +63,4 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_LOG_LEVEL=error

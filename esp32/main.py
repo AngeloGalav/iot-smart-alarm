@@ -19,9 +19,9 @@ sound_normal_alarm = 2
 music.stop()
 
 # MQTT setup
-# MQTT_BROKER = ""
-# MQTT_TOPIC_COMMAND = "iot_alarm/command"
-# MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
+MQTT_BROKER = "192.168.82.146"
+MQTT_TOPIC_COMMAND = "iot_alarm/command"
+MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
 music.volume(20)
 isPlaying = False
@@ -53,28 +53,28 @@ def connect_wifi():
     sleep(3)
 
 # MQTT client setup
-# def connect_mqtt():
-#     client = mqtt.MQTTClient("esp32_alarm", MQTT_BROKER)
-#     client.set_callback(mqtt_callback)
-#     client.connect()
-#     client.subscribe(MQTT_TOPIC_COMMAND)
-#     print("Connected to MQTT broker")
-#     return client
+def connect_mqtt():
+    client = mqtt.MQTTClient("esp32_alarm", MQTT_BROKER)
+    client.set_callback(mqtt_callback)
+    client.connect()
+    client.subscribe(MQTT_TOPIC_COMMAND)
+    print("Connected to MQTT broker")
+    return client
 
-# Handle incoming MQTT messages
-# def mqtt_callback(topic, msg):
-#     global isPlaying, sampling_rate
-#     msg = msg.decode("utf-8")
-#     if "trigger_alarm" in msg:
-#         start_alarm()
-#     elif "stop_alarm" in msg:
-#         stop_alarm()
-#     elif "sampling_rate" in msg:
-#         try:
-#             sampling_rate = int(msg.split(":")[1])
-#             print(f"Sampling rate set to {sampling_rate} seconds")
-#         except ValueError:
-#             print("Invalid sampling rate received")
+# handle incoming MQTT messages
+def mqtt_callback(topic, msg):
+    global isPlaying, sampling_rate
+    msg = msg.decode("utf-8")
+    if "trigger_alarm" in msg:
+        start_alarm()
+    elif "stop_alarm" in msg:
+        stop_alarm()
+    elif "sampling_rate" in msg:
+        try:
+            sampling_rate = int(msg.split(":")[1])
+            print(f"Sampling rate set to {sampling_rate} seconds")
+        except ValueError:
+            print("Invalid sampling rate received")
 
 # Start the alarm
 def start_alarm():
@@ -83,7 +83,6 @@ def start_alarm():
         isPlaying = True
         music.play(track_id=sound_normal_alarm)
         led.duty(1000)
-        print("Alarm triggered")
 
 # Stop the alarm
 def stop_alarm():
@@ -92,7 +91,6 @@ def stop_alarm():
         isPlaying = False
         music.stop()
         led.duty(0)
-        print("Alarm stopped")
 
 def check_pressure_mat():
     global isPlaying
@@ -106,17 +104,20 @@ def check_pressure_mat():
 # Main function
 def main():
     connect_wifi()
-    # client = connect_mqtt()
+    client = connect_mqtt()
 
     while True:
-        # client.check_msg()  # Check for incoming MQTT messages
+        try:
+            client.check_msg()  # Check for incoming MQTT messages
 
-        # send sensor state to mqtt broker
-        # sensor_state = "in_bed" if pressure_mat.value() else "out_of_bed"
-        # client.publish(MQTT_TOPIC_SENSOR, sensor_state)
-        # print(f"Sensor state published: {sensor_state}")
+            # send sensor state to mqtt broker
+            sensor_state = "out_of_bed" if pressure_mat.value() else "in_bed"
+            client.publish(MQTT_TOPIC_SENSOR, sensor_state)
+            check_pressure_mat()
+            sleep(sampling_rate)
+        except OSError as e:
+            print(f"MQTT error: {e}. Reconnecting...")
+            client = connect_mqtt()  # reconnect to the MQTT broker
 
-        check_pressure_mat()
-        sleep(sampling_rate)
-
-main()
+if __name__ == '__main__' :
+    main()
