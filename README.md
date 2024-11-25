@@ -9,6 +9,12 @@
 > [!WARNING]
 > Remember to add your user to the `uucp` or `dialout` group!! (Arch or Debian respectively).
 
+
+> [!WARNING]
+> You may need to change the permission of Grafana's data folder for it to work properly.
+> To do that, simply run the command:
+> `chown -R $USER grafana/data  && chmod -R 777 grafana/data`
+
 ## Tasks
 
 - [ ] ESP32 alarm
