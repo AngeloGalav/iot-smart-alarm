@@ -9,3 +9,8 @@ broker/data/*
 broker/log/*
 !broker/data/.gitkeep
 !broker/log/.gitkeep
+
+grafana/data/*
+influxdb/data/*
+!grafana/data/.gitkeep
+!influxdb/data/.gitkeep
