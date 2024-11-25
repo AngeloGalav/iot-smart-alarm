@@ -3,7 +3,7 @@ from machine import Pin, PWM
 from time import sleep
 import network
 import umqtt.simple as mqtt  # MicroPython MQTT library
-from secrets import WIFI_SSID, WIFI_PASSWORD
+from esp_secrets import WIFI_SSID, WIFI_PASSWORD
 
 # Hardware setup
 pressure_mat = Pin(18, Pin.IN, Pin.PULL_DOWN)
@@ -40,6 +40,7 @@ def connect_wifi():
     wlan = network.WLAN(network.STA_IF) # esp32 in station mode
     wlan.active(True)
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    mac = wlan.config('mac').hex()
 
     # wait for wifi
     while not wlan.isconnected():
@@ -47,7 +48,8 @@ def connect_wifi():
         pass
     # if connected play chime
     music.play(track_id=sound_connection_ok)
-    print("Connected to Wi-Fi")
+    print(f"Connected to Wi-Fi\nMy MAC Address is: {mac}")
+    print("Network config:", wlan.ifconfig())
     sleep(3)
 
 # MQTT client setup

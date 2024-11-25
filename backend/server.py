@@ -1,6 +1,9 @@
 """
-This python script only gets the weather for the next our.
-In the future it will also serve as the backend for the webapp and the esp32. Godo.
+Multi-purpose server.
+It should:
+- collect the data from the esp32
+- handle requests from the frontend
+- manage the alarms
 """
 
 import paho.mqtt.client as mqtt
@@ -8,10 +11,20 @@ from weather_utils import get_weather_data
 import json
 import os
 import time
+from influxdb_client import InfluxDBClient, Point, WriteOptions
 
-# MQTT configuration
+# MQTT config
 MQTT_BROKER_HOST = os.getenv('MQTT_BROKER_HOST', 'localhost')
 MQTT_BROKER_PORT = int(os.getenv('MQTT_BROKER_PORT', 1883))
+
+# influxdb config
+INFLUXDB_HOST = os.getenv("INFLUXDB_HOST", "localhost")
+INFLUXDB_PORT = int(os.getenv("INFLUXDB_PORT", 8086))
+INFLUXDB_BUCKET = os.getenv("DOCKER_INFLUXDB_INIT_BUCKET", "my-bucket")
+INFLUXDB_TOKEN = os.getenv("DOCKER_INFLUXDB_INIT_PASSWORD", "admin123")
+INFLUXDB_ORG = os.getenv("DOCKER_INFLUXDB_INIT_ORG", "my-org")
+
+# mqtt topics
 sensor_data_topic = "sensor/data"
 alarm_control_topic = "alarm/control"
 
@@ -19,16 +32,40 @@ alarm_control_topic = "alarm/control"
 alarm_triggered = False
 connected = False
 
+# Connect to InfluxDB
+influx_client = InfluxDBClient(
+    url=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
+    token=INFLUXDB_TOKEN,
+    org=INFLUXDB_ORG
+)
+write_api = influx_client.write_api(write_options=WriteOptions(batch_size=1))
+
+
+
 # callback for when a message is received
 def on_message(client, userdata, msg):
     global alarm_triggered
 
     topic = msg.topic
-    payload = json.loads(msg.payload.decode())
+    # try if msg is json
+    try:
+        payload = json.loads(msg.payload.decode())
+    except json.JSONDecodeError:
+        print(f"Received invalid JSON on topic {topic}: {msg.payload.decode()}")
+        return
 
     if topic == sensor_data_topic:
         print(f"Received sensor data: {payload}")
-        # TODO: store payload
+        # store sensor data in InfluxDB
+        try:
+            point = Point("sensor_data").tag("device", "esp32")
+            for key, value in payload.items():
+                if isinstance(value, (int, float)):  # only store numeric fields
+                    point = point.field(key, value)
+            write_api.write(bucket=INFLUXDB_BUCKET, record=point)
+            print("Sensor data written to InfluxDB.")
+        except Exception as e:
+            print(f"Error writing to InfluxDB: {e}")
 
     elif topic == alarm_control_topic:
         command = payload.get("command")

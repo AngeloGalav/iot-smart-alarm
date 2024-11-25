@@ -44,12 +44,13 @@
   - [x] Fix footer and make it design coherent with the design of the app (and smaller)
   - [x] Fix logo and about button (navbar) to make it design compatible with the rest of the frontend
     - [x] move button to top left
-  - [ ] Add dashboard
   - [x] alarm periodicity (based on day of the week)
+  - [ ] add toast notifications?
+  - [ ] add options menu for some useful commands? (i.e. stop all commands, enable angry mode...)
 
 - [ ] Telegram Bot
   - [ ] Do bot
 
-- [ ] Docker compose
-  - [ ] all of this sounds like a job for a Docker compose.
-  - [ ] You know what to do.
+- [x] Docker compose
+  - [x] all of this sounds like a job for a Docker compose.
+  - [x] You know what to do.
