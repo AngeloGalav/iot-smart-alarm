@@ -4,8 +4,10 @@ from time import sleep
 import network
 import umqtt.simple as mqtt  # MicroPython MQTT library
 from esp_secrets import WIFI_SSID, WIFI_PASSWORD
+import json
 
 # Hardware setup
+sensor_name = "sensorino_esp32"
 pressure_mat = Pin(18, Pin.IN, Pin.PULL_DOWN)
 led = PWM(Pin(2), freq=1000)
 music = Player(pin_TX=17, pin_RX=16)
@@ -19,7 +21,7 @@ sound_normal_alarm = 2
 music.stop()
 
 # MQTT setup
-MQTT_BROKER = "192.168.82.146"
+MQTT_BROKER = "192.168.1.11"
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
@@ -51,14 +53,18 @@ def connect_wifi():
     print(f"Connected to Wi-Fi\nMy MAC Address is: {mac}")
     print("Network config:", wlan.ifconfig())
     sleep(3)
+    return wlan.ifconfig()[0], mac
+
 
 # MQTT client setup
 def connect_mqtt():
     client = mqtt.MQTTClient("esp32_alarm", MQTT_BROKER)
     client.set_callback(mqtt_callback)
     client.connect()
+    # if connected play chime
     client.subscribe(MQTT_TOPIC_COMMAND)
     print("Connected to MQTT broker")
+    music.play(track_id=sound_connection_ok)
     return client
 
 # handle incoming MQTT messages
@@ -101,18 +107,30 @@ def check_pressure_mat():
         if not isPlaying:
             start_alarm()
 
+def publish_sensor_data(client, sensor_state, ip, mac):
+    payload = {
+        "sensor_name": sensor_name,
+        "sensor_ip": ip,
+        "sensor_mac": mac,
+        "state": sensor_state,
+    }
+    client.publish(MQTT_TOPIC_SENSOR, json.dumps(payload))
+    print(f"Published: {payload}")
+
 # Main function
 def main():
-    connect_wifi()
+    ip, mac = connect_wifi()
     client = connect_mqtt()
+    sleep(2)
 
     while True:
         try:
             client.check_msg()  # Check for incoming MQTT messages
 
             # send sensor state to mqtt broker
-            sensor_state = "out_of_bed" if pressure_mat.value() else "in_bed"
-            client.publish(MQTT_TOPIC_SENSOR, sensor_state)
+            # pressure_mat.value() is 0 when in bed, and 1 otherwise
+            sensor_state = not pressure_mat.value()
+            publish_sensor_data(client=client, sensor_state=sensor_state, ip=ip, mac=mac)
             check_pressure_mat()
             sleep(sampling_rate)
         except OSError as e:

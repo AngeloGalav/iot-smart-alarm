@@ -11,6 +11,7 @@ from weather_utils import get_weather_data
 import json
 import os
 import time
+from backend_secrets import influxdb_api_token
 from influxdb_client import InfluxDBClient, Point, WriteOptions
 
 # MQTT config
@@ -20,13 +21,13 @@ MQTT_BROKER_PORT = int(os.getenv('MQTT_BROKER_PORT', 1883))
 # influxdb config
 INFLUXDB_HOST = os.getenv("INFLUXDB_HOST", "localhost")
 INFLUXDB_PORT = int(os.getenv("INFLUXDB_PORT", 8086))
-INFLUXDB_BUCKET = os.getenv("DOCKER_INFLUXDB_INIT_BUCKET", "my-bucket")
-INFLUXDB_TOKEN = os.getenv("DOCKER_INFLUXDB_INIT_PASSWORD", "admin123")
-INFLUXDB_ORG = os.getenv("DOCKER_INFLUXDB_INIT_ORG", "my-org")
+INFLUXDB_BUCKET = os.getenv("DOCKER_INFLUXDB_INIT_BUCKET", "iot-bucket")
+INFLUXDB_TOKEN = influxdb_api_token
+INFLUXDB_ORG = os.getenv("DOCKER_INFLUXDB_INIT_ORG", "iot-org")
 
 # mqtt topics
-sensor_data_topic = "sensor/data"
-alarm_control_topic = "alarm/control"
+MQTT_TOPIC_COMMAND = "iot_alarm/command"
+MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
 # flags
 alarm_triggered = False
@@ -43,29 +44,29 @@ write_api = influx_client.write_api(write_options=WriteOptions(batch_size=1))
 # callback for when a message is received
 def on_message(client, userdata, msg):
     global alarm_triggered
+    print("received message!")
 
     topic = msg.topic
     # try if msg is json
     try:
         payload = json.loads(msg.payload.decode())
+        print(f"Received from {payload["sensor_name"]}, {payload}")
     except json.JSONDecodeError:
         print(f"Received invalid JSON on topic {topic}: {msg.payload.decode()}")
         return
 
-    if topic == sensor_data_topic:
-        print(f"Received sensor data: {payload}")
+    if topic == MQTT_TOPIC_SENSOR:
         # store sensor data in InfluxDB
         try:
             point = Point("sensor_data").tag("device", "esp32")
-            for key, value in payload.items():
-                if isinstance(value, (int, float)):  # only store numeric fields
-                    point = point.field(key, value)
+            value = int(payload["state"])
+            point = point.field("bed_state", value)
             write_api.write(bucket=INFLUXDB_BUCKET, record=point)
             print("Sensor data written to InfluxDB.")
         except Exception as e:
             print(f"Error writing to InfluxDB: {e}")
 
-    elif topic == alarm_control_topic:
+    elif topic == MQTT_TOPIC_COMMAND:
         command = payload.get("command")
         if command == "trigger_alarm":
             alarm_triggered = True
@@ -79,7 +80,7 @@ def on_message(client, userdata, msg):
 def on_connect(client, userdata, flags, reasonCode, properties=None):
     global connected
     print(f"Connected to MQTT broker with reason code {reasonCode}")
-    client.subscribe([(sensor_data_topic, 0), (alarm_control_topic, 0)])
+    client.subscribe([(MQTT_TOPIC_SENSOR, 0), (MQTT_TOPIC_COMMAND, 0)])
     connected = True
 
 def main():
@@ -106,8 +107,7 @@ def main():
 
         while True:
             # fetch weather data periodically
-            print("running...")
-            time.sleep(10)
+            time.sleep(1)
             # weather_data = get_weather_data()
             # if weather_data:
             #     print(f"Weather data: {weather_data}")

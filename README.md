@@ -4,7 +4,7 @@
   <img src="res//image.png" alt="Robot Alarm" width="400px"/>
 </p>
 
-## Installation instructions
+## Setup instructions
 
 > [!WARNING]
 > Remember to add your user to the `uucp` or `dialout` group!! (Arch or Debian respectively).
@@ -14,6 +14,12 @@
 > You may need to change the permission of Grafana's data folder for it to work properly.
 > To do that, simply run the command:
 > `chown -R $USER grafana/data  && chmod -R 777 grafana/data`
+
+## How to start
+You can simply use the `docker-compose` file provided in the repository, and start the infrastructure with the following command:
+```
+docker-compose up --build
+```
 
 ## Tasks
 
@@ -26,6 +32,8 @@
   - [ ] write alarm code
   - [ ] write AI alarm prediction code
   - [ ] implement angry mode
+  - [ ] add repeat sound
+  - [ ] add second sound for mqtt connection
 
 - [ ] Data proxy
   - [ ] write server code, which receives data from the esp32 and sends it to influxdb
@@ -47,6 +55,7 @@
   - [x] alarm periodicity (based on day of the week)
   - [ ] add toast notifications?
   - [ ] add options menu for some useful commands? (i.e. stop all commands, enable angry mode...)
+  - [ ] add ability to change the ip within the app
 
 - [ ] Telegram Bot
   - [ ] Do bot

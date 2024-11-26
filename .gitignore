@@ -6,6 +6,7 @@ esp32/esp_secrets.py
 telegram_bot/telegram_secrets.py
 docs/IOT2024-4.pdf
 **/__pycache__
+backend/backend_secrets.py
 
 broker/data/*
 broker/log/*
