@@ -2,9 +2,18 @@ from dfplayermini import Player
 from machine import Pin, PWM
 from time import sleep
 import network
+import socket
 import umqtt.simple as mqtt  # MicroPython MQTT library
 from esp_secrets import WIFI_SSID, WIFI_PASSWORD
 import json
+
+# Network setup
+static_ip_config = (
+    "192.168.254.56",  # IP Address for ESP32
+    "255.255.255.0", # Subnet mask
+    "192.168.254.2",
+    "192.168.254.2"
+)
 
 # Hardware setup
 sensor_name = "sensorino_esp32"
@@ -21,7 +30,6 @@ sound_normal_alarm = 2
 music.stop()
 
 # MQTT setup
-MQTT_BROKER = "192.168.1.11"
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
@@ -38,16 +46,26 @@ def led_fade():
         led.duty(duty_cycle)
         sleep(0.01)
 
-def connect_wifi():
+def connect_wifi(static_ip=None):
     wlan = network.WLAN(network.STA_IF) # esp32 in station mode
     wlan.active(True)
+
+    # configure static IP if not none
+    if static_ip:
+        ip, subnet, gateway, dns = static_ip
+        wlan.ifconfig((ip, subnet, gateway, dns))
+        print("Configured with Static IP:", wlan.ifconfig())
+    else:
+        print("Using DHCP for IP assignment")
+
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
-    mac = wlan.config('mac').hex()
 
     # wait for wifi
     while not wlan.isconnected():
         led_fade()
         pass
+
+    mac = wlan.config('mac').hex()
     # if connected play chime
     music.play(track_id=sound_connection_ok)
     print(f"Connected to Wi-Fi\nMy MAC Address is: {mac}")
@@ -55,10 +73,40 @@ def connect_wifi():
     sleep(3)
     return wlan.ifconfig()[0], mac
 
+def start_server(listener_port=8080, buf_size=1024):
+    '''
+    Function to get the broker/server ip.
+    '''
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', listener_port))  # Listen on all available network interfaces
+    s.listen(1)
+    print(f"Listening for broker IP on port {listener_port}...")
+
+    conn, addr = s.accept()
+    print(f"Connection from {addr}")
+
+    broker_ip = None
+    while True:
+        data = conn.recv(buf_size)
+        if not data:
+            break
+
+        broker_ip = data.decode().strip()
+        print(f"Received broker IP: {broker_ip}")
+
+        # Confirm receipt to the sender
+        conn.send(b"ACK")
+        break
+
+    conn.close()
+    s.close()
+
+    return broker_ip
+
 
 # MQTT client setup
-def connect_mqtt():
-    client = mqtt.MQTTClient("esp32_alarm", MQTT_BROKER)
+def connect_mqtt(broker_ip):
+    client = mqtt.MQTTClient("esp32_alarm", broker_ip)
     client.set_callback(mqtt_callback)
     client.connect()
     # if connected play chime
@@ -119,8 +167,9 @@ def publish_sensor_data(client, sensor_state, ip, mac):
 
 # Main function
 def main():
-    ip, mac = connect_wifi()
-    client = connect_mqtt()
+    ip, mac = connect_wifi(static_ip=static_ip_config)
+    broker_ip = start_server()
+    client = connect_mqtt(broker_ip=broker_ip)
     sleep(2)
 
     while True:
