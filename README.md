@@ -35,13 +35,16 @@ docker-compose up --build
   - [ ] add repeat sound
   - [ ] add second sound for mqtt connection
 
+- [ ] data analysis
+  - based on the sensor data collected, can determine the number of hours the user slept each day
+
 - [ ] Data proxy
-  - [ ] write server code, which receives data from the esp32 and sends it to influxdb
+  - [x] write server code, which receives data from the esp32 and sends it to influxdb
   - [ ] integrate it with the webapp
   - [x] weather api integration
 
 - [ ] influxdb
-  - [ ] setup influxdb instance to collect data
+  - [x] setup influxdb instance to collect data
 
 - [ ] grafana
   - [ ] develop a dashboard
@@ -60,6 +63,5 @@ docker-compose up --build
 - [ ] Telegram Bot
   - [ ] Do bot
 
-- [x] Docker compose
-  - [x] all of this sounds like a job for a Docker compose.
-  - [x] You know what to do.
+### Resources
+dfplayermini library here: https://github.com/lavron/micropython-dfplayermini
