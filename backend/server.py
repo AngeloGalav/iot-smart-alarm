@@ -1,22 +1,27 @@
-from flask import Flask
+from flask import Flask, request, jsonify
 import json
 import os
+from flask_cors import CORS
 import logging
 from influxdb_client import InfluxDBClient, Point, WriteOptions
 from flask_mqtt import Mqtt
 from backend_secrets import influxdb_api_token
 from weather_utils import get_weather_data
 from mqtt_utils import send_broker_ip
+from alarm_utils import save_alarms_to_file, load_alarms_from_file
 
 logging.basicConfig(level=logging.INFO)
 
+# flask config
 app = Flask(__name__)
+FLASK_APP_PORT = int(os.getenv("FLASK_APP_PORT", 5000))
 
 # MQTT configuration
 app.config['MQTT_BROKER_URL'] = os.getenv('MQTT_BROKER_HOST', 'localhost')
 app.config['MQTT_BROKER_PORT'] = int(os.getenv('MQTT_BROKER_PORT', 1883))
 
 mqtt = Mqtt(app)
+CORS(app) # enable CORS for all routes
 
 # ESP32 network info
 ESP32_IP = "192.168.254.56"
@@ -35,6 +40,9 @@ MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
 # flags
 alarm_triggered = False
+alarm_filename = "alarms.json"
+alarms = []
+latest_alarm_id = 0
 
 # connect to InfluxDB
 influx_client = InfluxDBClient(
@@ -44,10 +52,10 @@ influx_client = InfluxDBClient(
 )
 write_api = influx_client.write_api(write_options=WriteOptions(batch_size=1))
 
-# flask route for health check
-@app.route('/')
-def index():
-    return "Server is running!"
+def handle_alarm_trigger():
+    pass
+
+# ----- MQTT ENDPOINTS ------
 
 # handle incoming MQTT messages
 @mqtt.on_message()
@@ -89,16 +97,93 @@ def handle_connect(client, userdata, flags, rc):
     mqtt.subscribe(MQTT_TOPIC_SENSOR)
     mqtt.subscribe(MQTT_TOPIC_COMMAND)
 
+# ----- API ENDPOINTS ------
+
+@app.route('/alarms', methods=['POST'])
+def add_alarm():
+    global alarms
+    global latest_alarm_id
+    data = request.json
+    print ("I TRIED FUCK!")
+    if not data:
+        return jsonify({"error": "Invalid input"}), 400
+
+    latest_alarm_id += 1
+    alarm = {
+        "id": latest_alarm_id,  # Simple ID generator
+        "time": data.get("time"),
+        "weekdays": data.get("weekdays", []),
+        "active": True
+    }
+    alarms.append(alarm)
+    save_alarms_to_file(alarm_filename, alarms)
+    return jsonify({"message": "Alarm added successfully", "alarm": alarm}), 201
+
+@app.route('/alarms', methods=['GET'])
+def get_alarms():
+    '''
+    Returns all alarms.
+    '''
+    return jsonify(alarms)
+
+@app.route('/alarms/<int:alarm_id>', methods=['PUT'])
+def modify_alarm(alarm_id):
+    '''
+    Modifies the properties of an alarm.
+    '''
+    global alarms
+    data = request.json
+    for alarm in alarms:
+        if alarm["id"] == alarm_id:
+            alarm["time"] = data.get("time", alarm["time"])
+            alarm["weekdays"] = data.get("weekdays", alarm["weekdays"])
+            alarm["active"] = data.get("active", alarm["active"])
+            save_alarms_to_file(alarm_filename, alarms)
+            return jsonify({"message": "Alarm updated successfully", "alarm": alarm}), 200
+
+    return jsonify({"error": "Alarm not found"}), 404
+
+# API: Remove an alarm
+@app.route('/alarms/<int:alarm_id>', methods=['DELETE'])
+def remove_alarm(alarm_id):
+    '''
+    Deletes an alarm.
+    '''
+    global alarms
+    alarms = [alarm for alarm in alarms if alarm["id"] != alarm_id]
+    save_alarms_to_file(alarm_filename, alarms)  # Save to file after deletion
+    return jsonify({"message": "Alarm deleted successfully"}), 200
+
+# PATCH modifies the instance, while directly creates a new one
+@app.route('/alarms/<int:alarm_id>/toggle', methods=['PATCH'])
+def toggle_alarm(alarm_id):
+    '''
+    Enables alarm toggling.
+    '''
+    global alarms
+    for alarm in alarms:
+        if alarm["id"] == alarm_id:
+            alarm["active"] = not alarm["active"]
+            save_alarms_to_file(alarm_filename, alarms)
+            return jsonify({"message": "Alarm toggled successfully", "alarm": alarm}), 200
+
+    return jsonify({"error": "Alarm not found"}), 404
+
+
 if __name__ == '__main__':
     # Notify ESP32 about broker IP in a separate thread
-    send_broker_ip(alarm_ip=ESP32_IP, alarm_port=ESP32_PORT)
+    alarms = load_alarms_from_file(alarm_filename)
+    latest_alarm_id = len(alarms)
+    # send_broker_ip(alarm_ip=ESP32_IP, alarm_port=ESP32_PORT)
 
 
     # weather_data = get_weather_data()
     # if weather_data:
     #     print(f"Weather data: {weather_data}")
 
-    # if alarm_triggered:
-    #     print("!!! ALARM TRIGGERED !!! User needs to get up.")
-    # Start Flask app
-    app.run(host="0.0.0.0", port=5000)
+    if alarm_triggered:
+        logging.info("Triggered alarm!")
+        handle_alarm_trigger()
+
+    # start Flask app/backend server
+    app.run(host="0.0.0.0", port=FLASK_APP_PORT)

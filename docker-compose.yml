@@ -4,6 +4,9 @@ services:
     build:
       context: ./backend
     container_name: iot-backend-server
+    ports:
+      # - "1883:1883"
+      - "5000:5000"
     depends_on:
       - mqtt-broker
     volumes:
@@ -11,8 +14,9 @@ services:
     environment:
       - MQTT_BROKER_HOST=mqtt-broker
       - MQTT_BROKER_PORT=1883
+      - FLASK_APP_PORT=5000
 
-  iot-frontend:
+  iot-frontend-react:
     build:
       context: ./frontend
     container_name: iot-frontend-react

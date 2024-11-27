@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from "react";
+import api from "../api";
 
-const Alarm = ({ id, onDelete }) => {
+const Alarm = ({ id, time, days, active, onDelete}) => {
   const [isAlarmOn, setIsAlarmOn] = useState(false);
-  const [alarmTime, setAlarmTime] = useState("00:00");
+  const [alarmTime, setAlarmTime] = useState("08:00");
   const [selectedDays, setSelectedDays] = useState(new Set());
-
-  const handleToggle = () => setIsAlarmOn(!isAlarmOn);
-  const handleTimeChange = (e) => setAlarmTime(e.target.value);
-
   const weekdays = [
     { label: "M", id: 1, name: "Monday" },
     { label: "T", id: 2, name: "Tuesday" },
@@ -18,35 +15,60 @@ const Alarm = ({ id, onDelete }) => {
     { label: "S", id: 7, name: "Sunday" },
   ];
 
-  // Handle toggling of selected days
-  const handleDayClick = (dayId) => {
-    // react automatically sends the prevstate as parameter to the anon func
-    // this happens each time we use an updater from the useState hook
+  // handles alarm toggle by making a request
+  const handleToggle = async () => {
+    try {
+      const updatedAlarm = await api.toggleAlarm(id);
+      setIsAlarmOn(updatedAlarm.alarm.active);
+    } catch (error) {
+      console.error(`Error toggling alarm with id ${id} : ${error}`);
+    }
+  };
+
+  // handles alarm time change by making a request
+  const handleTimeChange = async (e) => {
+    const newTime = e.target.value;
+    setAlarmTime(newTime);
+    try {
+      await api.updateAlarm(id, { time: newTime });
+    } catch (error) {
+      console.error(`Error changing time for alarm id ${id} : ${error}`);
+    }
+  };
+
+  // handles weekday modification by making a request
+  const handleDayClick = async (dayId) => {
     setSelectedDays((prevDays) => {
       const updatedDays = new Set(prevDays);
-      // add to the set only if it is not the in the prevDays list, 
       updatedDays.has(dayId) ? updatedDays.delete(dayId) : updatedDays.add(dayId);
+
+      const updatedDayNames = Array.from(updatedDays).map(
+        (id) => weekdays.find((w) => w.id === id)?.name
+      );
+
+      api.updateAlarm(id, { weekdays: updatedDayNames }).catch((error) =>
+        console.error(`Error changing weekday for alarm id ${id} : ${error}`)
+      );
+
       return updatedDays;
     });
   };
 
-  // This stuff will be handled by the module in due time
-  // runs each time [isAlarmOn, alarmTime] changes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const currentTime = new Date();
-      // get current time
-      const formattedCurrentTime = `${String(currentTime.getHours()).padStart(2, '0')}:${String(
-        currentTime.getMinutes()
-      ).padStart(2, '0')}`;
-      // if current time is qual alarmTime, then ring!
-      if (isAlarmOn && formattedCurrentTime === alarmTime) {
-        alert("Alarm Ringing!");
-      }
-    }, 1000);
 
-    return () => clearInterval(interval);
-  }, [isAlarmOn, alarmTime]);
+  useEffect(() => {
+    if (!id) return;
+    const fetchAlarmData = async () => {
+      try {
+        console.log(time, days, active)
+        setAlarmTime(time);
+        setSelectedDays(new Set(days.map((day) => weekdays.find((w) => w.name === day)?.id)));
+        setIsAlarmOn(active);
+      } catch (error) {
+        console.error(`Error fetching alarm data for id ${id} : ${error}`);
+      }
+    };
+    fetchAlarmData();
+  }, [id]);
 
   return (
     <div className="p-4 my-2 bg-base-200 rounded-xl shadow-md space-y-4 text-center">
@@ -68,13 +90,12 @@ const Alarm = ({ id, onDelete }) => {
             </button>
           ))}
         </div>
-          
         {/* Delete button */}
         <button className="btn btn-error btn-sm" onClick={() => onDelete(id)}>
           Delete
         </button>
       </div>
-      
+
       {/* handle time change */}
       <div className="form-control">
         <label className="label">

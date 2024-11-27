@@ -40,8 +40,9 @@ docker-compose up --build
 
 - [ ] Data proxy
   - [x] write server code, which receives data from the esp32 and sends it to influxdb
-  - [ ] integrate it with the webapp
+  - [x] integrate it with the webapp
   - [x] weather api integration
+  - [ ] add alarm code
 
 - [ ] influxdb
   - [x] setup influxdb instance to collect data
@@ -58,7 +59,7 @@ docker-compose up --build
   - [x] alarm periodicity (based on day of the week)
   - [ ] add toast notifications?
   - [ ] add options menu for some useful commands? (i.e. stop all commands, enable angry mode...)
-  - [ ] add ability to change the ip within the app
+  - [ ] add ability to change the ip within the app?
 
 - [ ] Telegram Bot
   - [ ] Do bot

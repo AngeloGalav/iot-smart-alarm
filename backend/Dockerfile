@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . /app
 
-RUN pip install paho-mqtt requests influxdb-client flask
+RUN pip install paho-mqtt requests influxdb-client flask Flask-MQTT 
 
 CMD ["python", "server.py"]
