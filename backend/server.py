@@ -104,7 +104,6 @@ def add_alarm():
     global alarms
     global latest_alarm_id
     data = request.json
-    print ("I TRIED FUCK!")
     if not data:
         return jsonify({"error": "Invalid input"}), 400
 
