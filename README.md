@@ -29,7 +29,7 @@ docker-compose up --build
     - [ ] sampling_rate: interval between sensor readings
     - [ ] trigger_alarm (triggers alarm until user gets up)
     - [ ] stop_alarm
-  - [ ] write alarm code
+  - [x] write alarm code
   - [ ] write AI alarm prediction code
   - [ ] implement angry mode
   - [ ] add repeat sound
@@ -58,8 +58,12 @@ docker-compose up --build
     - [x] move button to top left
   - [x] alarm periodicity (based on day of the week)
   - [ ] add toast notifications?
-  - [ ] add options menu for some useful commands? (i.e. stop all commands, enable angry mode...)
+  - [x] add options menu for some useful commands? (i.e. stop all commands, enable angry mode...)
+  - [ ] make options menu
   - [ ] add ability to change the ip within the app?
+
+- [ ] Readme
+  - [ ] make proper readme file
 
 - [ ] Telegram Bot
   - [ ] Do bot

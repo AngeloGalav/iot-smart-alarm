@@ -3,6 +3,9 @@ import json
 import logging
 
 def load_alarms_from_file(alarm_file):
+    '''
+    Loads the alarm from a json file and returns them as a variable.
+    '''
     global alarms
     if os.path.exists(alarm_file):
         try:
@@ -18,6 +21,9 @@ def load_alarms_from_file(alarm_file):
     return alarms
 
 def save_alarms_to_file(alarm_file, alarms):
+    '''
+    Saves alarms to a json file.
+    '''
     try:
         with open(alarm_file, 'w') as file:
             json.dump(alarms, file, indent=4)

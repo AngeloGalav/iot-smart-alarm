@@ -60,7 +60,7 @@ const Hero = () => {
         console.error("Error deleting all alarms:", error);
       }
     };
-  
+
     // Set all alarms to off
     const setAllAlarmsOff = async () => {
       try {
@@ -72,7 +72,7 @@ const Hero = () => {
         console.error("Error setting all alarms to off:", error);
       }
     };
-  
+
     // Stop the current active alarm
     const stopActiveAlarm = async () => {
       try {
@@ -82,7 +82,7 @@ const Hero = () => {
         console.error("Error stopping active alarm:", error);
       }
     };
-  
+
     // Reset the device
     const resetDevice = async () => {
       try {
@@ -92,7 +92,7 @@ const Hero = () => {
         console.error("Error resetting device:", error);
       }
     };
-  
+
     // Save settings from modal
     const saveSettings = (settings) => {
       console.log("Settings saved:", settings);
@@ -125,17 +125,17 @@ const Hero = () => {
         onResetDevice={resetDevice}
       />
 
-      <div className="p-6 bg-base-300 min-h-full mt-4 rounded-2xl text-center space-y-6">
+      <div className="p-6 bg-base-300 min-h-full mt-4 mb-4 rounded-2xl text-center space-y-6">
         <div className="space-y-4">
           {alarms && alarms.length > 0 ? (
             alarms.map((alarm) => (
-              <Alarm 
+              <Alarm
               key={alarm.id}
               time={alarm.time}
               active={alarm.active}
-              days={alarm.weekdays} 
-              id={alarm.id} 
-              onDelete={deleteAlarm} 
+              days={alarm.weekdays}
+              id={alarm.id}
+              onDelete={deleteAlarm}
               />
             ))
           ) : (

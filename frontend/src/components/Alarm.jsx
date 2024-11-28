@@ -6,13 +6,13 @@ const Alarm = ({ id, time, days, active, onDelete}) => {
   const [alarmTime, setAlarmTime] = useState("08:00");
   const [selectedDays, setSelectedDays] = useState(new Set());
   const weekdays = [
-    { label: "M", id: 1, name: "Monday" },
-    { label: "T", id: 2, name: "Tuesday" },
-    { label: "W", id: 3, name: "Wednesday" },
-    { label: "T", id: 4, name: "Thursday" },
-    { label: "F", id: 5, name: "Friday" },
-    { label: "S", id: 6, name: "Saturday" },
-    { label: "S", id: 7, name: "Sunday" },
+    { label: "M", id: 0, name: "Monday" },
+    { label: "T", id: 1, name: "Tuesday" },
+    { label: "W", id: 2, name: "Wednesday" },
+    { label: "T", id: 3, name: "Thursday" },
+    { label: "F", id: 4, name: "Friday" },
+    { label: "S", id: 5, name: "Saturday" },
+    { label: "S", id: 6, name: "Sunday" },
   ];
 
   // handles alarm toggle by making a request
@@ -43,7 +43,7 @@ const Alarm = ({ id, time, days, active, onDelete}) => {
       updatedDays.has(dayId) ? updatedDays.delete(dayId) : updatedDays.add(dayId);
 
       const updatedDayNames = Array.from(updatedDays).map(
-        (id) => weekdays.find((w) => w.id === id)?.name
+        (id) => weekdays.find((w) => w.id === id)?.id
       );
 
       api.updateAlarm(id, { weekdays: updatedDayNames }).catch((error) =>
@@ -61,7 +61,7 @@ const Alarm = ({ id, time, days, active, onDelete}) => {
       try {
         console.log(time, days, active)
         setAlarmTime(time);
-        setSelectedDays(new Set(days.map((day) => weekdays.find((w) => w.name === day)?.id)));
+        setSelectedDays(new Set(days.map((day) => weekdays.find((w) => w.id === day)?.id)));
         setIsAlarmOn(active);
       } catch (error) {
         console.error(`Error fetching alarm data for id ${id} : ${error}`);

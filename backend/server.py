@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify
 import json
+import threading
 import os
+import time
+from datetime import datetime
 from flask_cors import CORS
 import logging
 from influxdb_client import InfluxDBClient, Point, WriteOptions
@@ -169,6 +172,30 @@ def toggle_alarm(alarm_id):
     return jsonify({"error": "Alarm not found"}), 404
 
 
+# ----- Alarm clock thread -----
+def alarm_clock():
+    """
+    Runs in a separate thread, continuously checks for active alarms and triggers them.
+    """
+    logging.info("alarm clock manager thread ready.")
+    global alarms, alarm_triggered
+    while True:
+        now = datetime.now()
+        current_time = now.strftime("%H:%M")  # format: HH:MM
+        current_weekday = now.weekday()  # weekdays: 0-6 mon-sun
+
+        for alarm in alarms:
+            wk_days_cache = alarm.get("weekdays", [])
+            if alarm["active"] and alarm["time"] == current_time \
+                and ((current_weekday in wk_days_cache) or wk_days_cache == []):
+                    # if wkd == [], then no repetition schedule is set: it will be repeated everyday
+                    if not alarm_triggered:
+                        alarm_triggered = True
+                        logging.info(f"Alarm {alarm['id']} triggered at {current_time} on weekday {current_weekday}")
+                        mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "trigger_alarm"}))
+        time.sleep(10)  # check every 10 seconds, to make it less expensive
+
+
 if __name__ == '__main__':
     # Notify ESP32 about broker IP in a separate thread
     alarms = load_alarms_from_file(alarm_filename)
@@ -179,6 +206,10 @@ if __name__ == '__main__':
     # weather_data = get_weather_data()
     # if weather_data:
     #     print(f"Weather data: {weather_data}")
+
+    # set the alarm clock thread
+    alarm_thread = threading.Thread(target=alarm_clock, daemon=True)
+    alarm_thread.start()
 
     if alarm_triggered:
         logging.info("Triggered alarm!")

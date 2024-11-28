@@ -8,6 +8,7 @@ docs/IOT2024-4.pdf
 **/__pycache__
 backend/backend_secrets.py
 backend/alarms.json
+alarms.json
 
 broker/data/*
 broker/log/*
