@@ -122,9 +122,8 @@ const Alarm = ({ id, time, days, active, onDelete}) => {
       </div>
 
       <p className="text-lg">
-        Alarm is <span className={isAlarmOn ? "text-green-500" : "text-red-500"}>{isAlarmOn ? "On" : "Off"}</span>
+        Alarm is <span className={isAlarmOn ? "text-green-500" : "text-red-500"}>{isAlarmOn ? "ON" : "OFF"}</span>
       </p>
-      <p className="text-lg">Alarm set for: {alarmTime}</p>
     </div>
   );
 };
