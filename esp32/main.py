@@ -3,13 +3,14 @@ from machine import Pin, PWM
 from time import sleep
 import network
 import socket
+import urequests  # MicroPython HTTP library
 import umqtt.simple as mqtt  # MicroPython MQTT library
 from esp_secrets import WIFI_SSID, WIFI_PASSWORD
 import json
 
 # Network setup
 static_ip_config = (
-    "192.168.254.56",  # IP Address for ESP32
+    "192.168.148.56",  # IP Address for ESP32
     "255.255.255.0", # Subnet mask
     "192.168.254.2",
     "192.168.254.2"
@@ -22,9 +23,11 @@ led = PWM(Pin(2), freq=1000)
 music = Player(pin_TX=17, pin_RX=16)
 
 # chimes ids setup
-sound_connection_ok = 3
 sound_angry_alarm = 1
 sound_normal_alarm = 2
+sound_connection_ok = 4
+sound_wait_mqtt = 5
+sound_connection_complete = 3
 
 # stops any previously running sounds on the player
 music.stop()
@@ -34,8 +37,10 @@ MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
 music.volume(20)
-isPlaying = False
 sampling_rate = 1
+isPlaying = False
+alarm_ringing = False
+use_http = True
 
 # led fade code for the connection step
 def led_fade():
@@ -75,10 +80,10 @@ def connect_wifi(static_ip=None):
 
 def start_server(listener_port=8080, buf_size=1024):
     '''
-    Function to get the broker/server ip.
+    Function to get the broker/server ip through TCP.
     '''
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('', listener_port))  # Listen on all available network interfaces
+    s.bind(('', listener_port))  # listen on all available network interfaces
     s.listen(1)
     print(f"Listening for broker IP on port {listener_port}...")
 
@@ -94,7 +99,7 @@ def start_server(listener_port=8080, buf_size=1024):
         broker_ip = data.decode().strip()
         print(f"Received broker IP: {broker_ip}")
 
-        # Confirm receipt to the sender
+        # confirm recv to the sender
         conn.send(b"ACK")
         break
 
@@ -112,7 +117,7 @@ def connect_mqtt(broker_ip):
     # if connected play chime
     client.subscribe(MQTT_TOPIC_COMMAND)
     print("Connected to MQTT broker")
-    music.play(track_id=sound_connection_ok)
+    music.play(track_id=sound_connection_complete)
     return client
 
 # handle incoming MQTT messages
@@ -123,6 +128,9 @@ def mqtt_callback(topic, msg):
         start_alarm()
     elif "stop_alarm" in msg:
         stop_alarm()
+    elif "switch_connection_mode" in msg:
+        use_http = not use_http
+        print(f"connection mode set to: {'http' if use_http else 'mqtt'}")
     elif "sampling_rate" in msg:
         try:
             sampling_rate = int(msg.split(":")[1])
@@ -155,19 +163,31 @@ def check_pressure_mat():
         if not isPlaying:
             start_alarm()
 
-def publish_sensor_data(client, sensor_state, ip, mac):
+def publish_sensor_data(sensor_state, ip, mac, client=None, broker_ip=None):
     payload = {
         "sensor_name": sensor_name,
         "sensor_ip": ip,
         "sensor_mac": mac,
         "state": sensor_state,
     }
-    client.publish(MQTT_TOPIC_SENSOR, json.dumps(payload))
-    print(f"Published: {payload}")
+    if client is not None :
+        client.publish(MQTT_TOPIC_SENSOR, json.dumps(payload))
+        print(f"Published using MQTT: {payload}")
+    else :
+        try:
+            print(f"Publishing payload using HTTP... Payload: {payload}")
+            response = urequests.post(f"http://{broker_ip}:5000/recv_data", json=payload)
+            print(response)
+            print(f"HTTP Response: {response.status_code}, {response.text}")
+            response.close()
+        except Exception as e:
+            print(f"HTTP error: {e}")
+
 
 # Main function
 def main():
     ip, mac = connect_wifi(static_ip=static_ip_config)
+    music.play(track_id=sound_wait_mqtt)
     broker_ip = start_server()
     client = connect_mqtt(broker_ip=broker_ip)
     sleep(2)
@@ -176,15 +196,23 @@ def main():
         try:
             client.check_msg()  # Check for incoming MQTT messages
 
-            # send sensor state to mqtt broker
-            # pressure_mat.value() is 0 when in bed, and 1 otherwise
+            # Send sensor state to HTTP or MQTT broker
             sensor_state = not pressure_mat.value()
-            publish_sensor_data(client=client, sensor_state=sensor_state, ip=ip, mac=mac)
+            if use_http:
+                # use http for sensor data
+                publish_sensor_data(sensor_state=sensor_state, ip=ip, mac=mac, broker_ip=broker_ip)
+            else:
+                # use mqtt for sensor data
+                publish_sensor_data(sensor_state=sensor_state, ip=ip, mac=mac, client=client)
+
             check_pressure_mat()
             sleep(sampling_rate)
         except OSError as e:
-            print(f"MQTT error: {e}. Reconnecting...")
-            client = connect_mqtt()  # reconnect to the MQTT broker
+            if not use_http:
+                print(f"Error: {e}. Reconnecting...")
+                client = connect_mqtt(broker_ip=broker_ip)  # Reconnect to the MQTT broker
+            else:
+                print(f"Error processing request: {e}.")
 
 if __name__ == '__main__' :
     main()

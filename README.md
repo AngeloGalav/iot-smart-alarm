@@ -30,7 +30,7 @@ docker-compose up --build
     - [ ] trigger_alarm (triggers alarm until user gets up)
     - [ ] stop_alarm
   - [x] write alarm code
-  - [ ] write AI alarm prediction code
+  - [ ] write AI alarm prediction code?
   - [ ] implement angry mode
   - [ ] add repeat sound
   - [ ] add second sound for mqtt connection
@@ -42,7 +42,7 @@ docker-compose up --build
   - [x] write server code, which receives data from the esp32 and sends it to influxdb
   - [x] integrate it with the webapp
   - [x] weather api integration
-  - [ ] add alarm code
+  - [x] add alarm code
 
 - [ ] influxdb
   - [x] setup influxdb instance to collect data
@@ -59,8 +59,7 @@ docker-compose up --build
   - [x] alarm periodicity (based on day of the week)
   - [ ] add toast notifications?
   - [x] add options menu for some useful commands? (i.e. stop all commands, enable angry mode...)
-  - [ ] make options menu
-  - [ ] add ability to change the ip within the app?
+  - [x] make options menu
 
 - [ ] Readme
   - [ ] make proper readme file

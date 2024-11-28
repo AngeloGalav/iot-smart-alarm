@@ -23,11 +23,17 @@ FLASK_APP_PORT = int(os.getenv("FLASK_APP_PORT", 5000))
 app.config['MQTT_BROKER_URL'] = os.getenv('MQTT_BROKER_HOST', 'localhost')
 app.config['MQTT_BROKER_PORT'] = int(os.getenv('MQTT_BROKER_PORT', 1883))
 
-mqtt = Mqtt(app)
+try:
+    mqtt = Mqtt(app)
+except Exception as e:
+    logging.error(f"Error starting MQTT connection: {e}\n" \
+        "Have you started the MQTT Broker?")
+    exit()
+
 CORS(app) # enable CORS for all routes
 
 # ESP32 network info
-ESP32_IP = "192.168.254.56"
+ESP32_IP = "192.168.148.56"
 ESP32_PORT = 8080
 
 # InfluxDB configuration
@@ -54,9 +60,6 @@ influx_client = InfluxDBClient(
     org=INFLUXDB_ORG
 )
 write_api = influx_client.write_api(write_options=WriteOptions(batch_size=1))
-
-def handle_alarm_trigger():
-    pass
 
 # ----- MQTT ENDPOINTS ------
 
@@ -101,6 +104,42 @@ def handle_connect(client, userdata, flags, rc):
     mqtt.subscribe(MQTT_TOPIC_COMMAND)
 
 # ----- API ENDPOINTS ------
+@app.route('/recv_data', methods=['POST'])
+def recv_data():
+    try:
+        # Get JSON data from the request
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "No data provided"}), 400
+
+        logging.info(f"Received data: {data}")
+
+        # Extract the required fields
+        sensor_name = data.get('sensor_name')
+        sensor_ip = data.get('sensor_ip')
+        sensor_mac = data.get('sensor_mac')
+        state = data.get('state')
+
+        if sensor_name is None or sensor_ip is None or sensor_mac is None or state is None:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
+        # write data to InfluxDB
+        try:
+            point = Point("sensor_data").tag("device", sensor_name).tag("ip", sensor_ip).tag("mac", sensor_mac)
+            value = int(state)  # Ensure state is stored as an integer
+            point = point.field("bed_state", value)
+            write_api.write(bucket=INFLUXDB_BUCKET, record=point)
+            logging.info("Sensor data written to InfluxDB.")
+        except Exception as e:
+            logging.error(f"Error writing to InfluxDB: {e}")
+            return jsonify({"status": "error", "message": f"Error writing to InfluxDB: {e}"}), 500
+
+        # return a success response
+        return jsonify({"status": "success", "message": "Data received and stored successfully"}), 200
+
+    except Exception as e:
+        logging.error(f"Error processing request: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/alarms', methods=['POST'])
 def add_alarm():
@@ -117,6 +156,10 @@ def add_alarm():
         "weekdays": data.get("weekdays", []),
         "active": True
     }
+
+    if alarm.get("time") is None or alarm.get("time") == []:
+        return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
     alarms.append(alarm)
     save_alarms_to_file(alarm_filename, alarms)
     return jsonify({"message": "Alarm added successfully", "alarm": alarm}), 201
@@ -152,7 +195,10 @@ def remove_alarm(alarm_id):
     Deletes an alarm.
     '''
     global alarms
+    len1 = len(alarms)
     alarms = [alarm for alarm in alarms if alarm["id"] != alarm_id]
+    if len(alarms) != len1-1:
+        return jsonify({"message": "Alarm was not deleted."}), 400
     save_alarms_to_file(alarm_filename, alarms)  # Save to file after deletion
     return jsonify({"message": "Alarm deleted successfully"}), 200
 
@@ -171,6 +217,42 @@ def toggle_alarm(alarm_id):
 
     return jsonify({"error": "Alarm not found"}), 404
 
+@app.route('/stop_alarm', methods=['POST'])
+def stop_alarm():
+    '''
+    Stops alarm running on the esp32.
+    '''
+    logging.info(f"Stopping alarm running on the esp32.")
+    mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "stop_alarm"}))
+
+@app.route('/switch_protocol', methods=['POST'])
+def switch_protocol():
+    '''
+    Stops alarm running on the esp32.
+    '''
+    logging.info(f"Switched alarm data transmission protocol.")
+    mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "switch_protocol"}))
+
+@app.route('/sampling_rate', methods=['POST'])
+def sampling_rate():
+    '''
+    Receives a sample rate from the POST request, validates it, and sends it to the ESP32 via MQTT.
+    '''
+    try:
+        data = request.get_json()
+        sample_rate_val = data.get('sampling_rate')
+        if not isinstance(sample_rate_val, int) or sample_rate_val <= 0:
+            return jsonify({"status": "error", "message": "'sample_rate' must be a positive integer"}), 400
+
+        mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "sample_rate", "value": sample_rate_val}))
+        logging.info(f"Published sample rate: {sample_rate_val} to topic {MQTT_TOPIC_COMMAND}")
+
+        return jsonify({"status": "success", "message": f"Sample rate set to {sample_rate_val}"}), 200
+
+    except Exception as e:
+        logging.error(f"Error in /sample_rate endpoint: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # ----- Alarm clock thread -----
 def alarm_clock():
@@ -179,6 +261,9 @@ def alarm_clock():
     """
     logging.info("alarm clock manager thread ready.")
     global alarms, alarm_triggered
+
+    send_broker_ip(alarm_ip=ESP32_IP, alarm_port=ESP32_PORT)
+
     while True:
         now = datetime.now()
         current_time = now.strftime("%H:%M")  # format: HH:MM
@@ -200,8 +285,6 @@ if __name__ == '__main__':
     # Notify ESP32 about broker IP in a separate thread
     alarms = load_alarms_from_file(alarm_filename)
     latest_alarm_id = len(alarms)
-    # send_broker_ip(alarm_ip=ESP32_IP, alarm_port=ESP32_PORT)
-
 
     # weather_data = get_weather_data()
     # if weather_data:
@@ -210,10 +293,6 @@ if __name__ == '__main__':
     # set the alarm clock thread
     alarm_thread = threading.Thread(target=alarm_clock, daemon=True)
     alarm_thread.start()
-
-    if alarm_triggered:
-        logging.info("Triggered alarm!")
-        handle_alarm_trigger()
 
     # start Flask app/backend server
     app.run(host="0.0.0.0", port=FLASK_APP_PORT)
