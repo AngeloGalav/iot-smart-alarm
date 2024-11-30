@@ -10,7 +10,7 @@ from influxdb_client import InfluxDBClient, Point, WriteOptions
 from flask_mqtt import Mqtt
 from backend_secrets import influxdb_api_token
 from weather_utils import get_weather_data
-from mqtt_utils import send_broker_ip
+import mqtt_utils
 from alarm_utils import save_alarms_to_file, load_alarms_from_file
 
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +29,7 @@ except Exception as e:
     logging.error(f"Error starting MQTT connection: {e}\n" \
         "Have you started the MQTT Broker?")
     exit()
+
 
 CORS(app) # enable CORS for all routes
 
@@ -70,31 +71,34 @@ def handle_mqtt_message(client, userdata, message):
     topic = message.topic
     try:
         payload = json.loads(message.payload.decode())
-        logging.info(f"Received from {payload['sensor_name']}, {payload}")
+        logging.info(f"MQTT received from broker")
+
+        # if I receive a message from esp32
+        # it's already connected, stop send_broker_ip thread
+        if not mqtt_utils.get_alarm_connected():
+            mqtt_utils.set_alarm_connected(True)
+
     except json.JSONDecodeError:
         logging.error(f"Received invalid JSON on topic {topic}: {message.payload.decode()}")
         return
 
     if topic == MQTT_TOPIC_SENSOR:
         try:
+            sensor_name = payload.get('sensor_name')
+            sensor_ip = payload.get('sensor_ip')
+            state = payload.get('state')
+
+            if sensor_name is None or sensor_ip is None or state is None:
+                logging.error("Sensor data missing required fields.")
+
             # store sensor data in InfluxDB
-            point = Point("sensor_data").tag("device", "esp32")
-            value = int(payload["state"])
+            point = Point("sensor_data").tag("device", sensor_name)
+            value = int(state)
             point = point.field("bed_state", value)
             write_api.write(bucket=INFLUXDB_BUCKET, record=point)
             logging.info("Sensor data written to InfluxDB.")
         except Exception as e:
             logging.error(f"Error writing to InfluxDB: {e}")
-
-    # this is wrong. changing later after testing
-    elif topic == MQTT_TOPIC_COMMAND:
-        command = payload.get("command")
-        if command == "trigger_alarm":
-            alarm_triggered = True
-            logging.info("Alarm triggered!")
-        elif command == "stop_alarm":
-            alarm_triggered = False
-            logging.info("Alarm stopped.")
 
 # Handle MQTT connect event
 @mqtt.on_connect()
@@ -107,6 +111,11 @@ def handle_connect(client, userdata, flags, rc):
 @app.route('/recv_data', methods=['POST'])
 def recv_data():
     try:
+        # if I receive a message from esp32
+        # it's already connected, stop send_broker_ip thread
+        if not mqtt_utils.get_alarm_connected():
+            mqtt_utils.set_alarm_connected(True)
+
         # Get JSON data from the request
         data = request.get_json()
         if not data:
@@ -125,14 +134,14 @@ def recv_data():
 
         # write data to InfluxDB
         try:
-            point = Point("sensor_data").tag("device", sensor_name).tag("ip", sensor_ip).tag("mac", sensor_mac)
-            value = int(state)  # Ensure state is stored as an integer
+            # store sensor data in InfluxDB
+            point = Point("sensor_data").tag("device", sensor_name)
+            value = int(state)
             point = point.field("bed_state", value)
             write_api.write(bucket=INFLUXDB_BUCKET, record=point)
             logging.info("Sensor data written to InfluxDB.")
         except Exception as e:
             logging.error(f"Error writing to InfluxDB: {e}")
-            return jsonify({"status": "error", "message": f"Error writing to InfluxDB: {e}"}), 500
 
         # return a success response
         return jsonify({"status": "success", "message": "Data received and stored successfully"}), 200
@@ -259,10 +268,10 @@ def alarm_clock():
     """
     Runs in a separate thread, continuously checks for active alarms and triggers them.
     """
-    logging.info("alarm clock manager thread ready.")
+    logging.info("Alarm clock manager thread ready.")
     global alarms, alarm_triggered
 
-    send_broker_ip(alarm_ip=ESP32_IP, alarm_port=ESP32_PORT)
+    mqtt_utils.send_broker_ip(alarm_ip=ESP32_IP, alarm_port=ESP32_PORT)
 
     while True:
         now = datetime.now()
@@ -281,10 +290,14 @@ def alarm_clock():
         time.sleep(10)  # check every 10 seconds, to make it less expensive
 
 
+
 if __name__ == '__main__':
     # Notify ESP32 about broker IP in a separate thread
     alarms = load_alarms_from_file(alarm_filename)
     latest_alarm_id = len(alarms)
+
+    # Start MQTT app
+    mqtt.init_app(app)
 
     # weather_data = get_weather_data()
     # if weather_data:

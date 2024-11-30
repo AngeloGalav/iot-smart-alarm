@@ -5,6 +5,7 @@ import network
 import socket
 import urequests  # MicroPython HTTP library
 import umqtt.simple as mqtt  # MicroPython MQTT library
+import uasyncio as asyncio
 from esp_secrets import WIFI_SSID, WIFI_PASSWORD
 import json
 
@@ -32,7 +33,7 @@ sound_connection_complete = 3
 # stops any previously running sounds on the player
 music.stop()
 
-# MQTT setup
+# # MQTT setup
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
@@ -41,6 +42,7 @@ sampling_rate = 1
 isPlaying = False
 alarm_ringing = False
 use_http = True
+http_async = False
 
 # led fade code for the connection step
 def led_fade():
@@ -108,7 +110,6 @@ def start_server(listener_port=8080, buf_size=1024):
 
     return broker_ip
 
-
 # MQTT client setup
 def connect_mqtt(broker_ip):
     client = mqtt.MQTTClient("esp32_alarm", broker_ip)
@@ -138,6 +139,39 @@ def mqtt_callback(topic, msg):
         except ValueError:
             print("Invalid sampling rate received")
 
+
+async def async_http_post(url, data):
+    global sampling_rate
+    try:
+        response = urequests.post(url, json=data)
+        response.close()  # close the connection immediately
+        print("POST request sent successfully.")
+    except Exception as e:
+        print(f"Error sending async POST request: {e}")
+
+
+def publish_sensor_data(sensor_state, ip, mac, client=None, broker_ip=None):
+    payload = {
+        "sensor_name": sensor_name,
+        "sensor_ip": ip,
+        "sensor_mac": mac,
+        "state": sensor_state,
+    }
+    if client is not None :
+        client.publish(MQTT_TOPIC_SENSOR, json.dumps(payload))
+        print(f"Published using MQTT: {payload}")
+    else :
+        try:
+            if (http_async):
+                print(f"Publishing payload using async HTTP... Payload: {payload}")
+                asyncio.run(async_http_post(f"http://{broker_ip}:5000/recv_data", payload))
+            else :
+                print(f"Publishing payload using HTTP... Payload: {payload}")
+                response = urequests.post(f"http://{broker_ip}:5000/recv_data", json=payload)
+                response.close()
+        except Exception as e:
+            print(f"HTTP error: {e}")
+
 # Start the alarm
 def start_alarm():
     global isPlaying
@@ -162,27 +196,6 @@ def check_pressure_mat():
     else:  #TODO: remove this after testing
         if not isPlaying:
             start_alarm()
-
-def publish_sensor_data(sensor_state, ip, mac, client=None, broker_ip=None):
-    payload = {
-        "sensor_name": sensor_name,
-        "sensor_ip": ip,
-        "sensor_mac": mac,
-        "state": sensor_state,
-    }
-    if client is not None :
-        client.publish(MQTT_TOPIC_SENSOR, json.dumps(payload))
-        print(f"Published using MQTT: {payload}")
-    else :
-        try:
-            print(f"Publishing payload using HTTP... Payload: {payload}")
-            response = urequests.post(f"http://{broker_ip}:5000/recv_data", json=payload)
-            print(response)
-            print(f"HTTP Response: {response.status_code}, {response.text}")
-            response.close()
-        except Exception as e:
-            print(f"HTTP error: {e}")
-
 
 # Main function
 def main():
