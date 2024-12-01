@@ -33,16 +33,21 @@ sound_connection_complete = 3
 # stops any previously running sounds on the player
 music.stop()
 
-# # MQTT setup
+# MQTT setup
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
 music.volume(20)
-sampling_rate = 1
-isPlaying = False
+is_playing = False
+# REMEMBER TO SET THIS TO FALSE IN SPECIFIC CONDITIONS THANKS!!!!!!!!!!!!!
+alarm_go = True
 alarm_ringing = False
+
+# settings
 use_http = True
 http_async = False
+angry_mode = False
+sampling_rate = 1
 
 # led fade code for the connection step
 def led_fade():
@@ -123,21 +128,45 @@ def connect_mqtt(broker_ip):
 
 # handle incoming MQTT messages
 def mqtt_callback(topic, msg):
-    global isPlaying, sampling_rate
+    global use_http, http_async, angry_mode, sampling_rate
+
     msg = msg.decode("utf-8")
+    print(f"Received message on topic {topic.decode('utf-8')}: {msg}")
+    data = json.loads(msg)  # Parse the JSON data
+
     if "trigger_alarm" in msg:
         start_alarm()
     elif "stop_alarm" in msg:
         stop_alarm()
-    elif "switch_connection_mode" in msg:
-        use_http = not use_http
-        print(f"connection mode set to: {'http' if use_http else 'mqtt'}")
     elif "sampling_rate" in msg:
         try:
-            sampling_rate = int(msg.split(":")[1])
+            val_to_clean = msg.split(":")[-1]
+            number = ''.join(c for c in val_to_clean if c.isdigit() or c == '.')
+            sampling_rate = float(number)
             print(f"Sampling rate set to {sampling_rate} seconds")
         except ValueError:
-            print("Invalid sampling rate received")
+            print("Invalid sampling rate received", sampling_rate)
+    else:
+        # handling settings
+        try:
+            data = json.loads(msg)
+            if 'use_mqtt' in data:
+                use_http = not data['use_mqtt']
+                print(f"Data trasnmission protocol set to: {'HTTP' if use_http else 'MQTT'}")
+
+            if 'use_async_http' in data:
+                http_async = data['use_async_http']
+                print(f"HTTP mode set to: {'async' if http_async else 'normal'}")
+
+            if 'angry_mode' in data:
+                angry_mode = data['angry_mode']
+                print(f"Angry mode {'enabled' if angry_mode else 'disabled'}")
+
+            if 'samplingRate' in data:
+                sampling_rate = float(data['samplingRate'])
+                print(f"Sampling rate set to {sampling_rate}")
+        except Exception as e:
+            print(f"Error processing MQTT message: {e}")
 
 
 async def async_http_post(url, data):
@@ -174,27 +203,27 @@ def publish_sensor_data(sensor_state, ip, mac, client=None, broker_ip=None):
 
 # Start the alarm
 def start_alarm():
-    global isPlaying
-    if not isPlaying:
-        isPlaying = True
+    global is_playing
+    if not is_playing:
+        is_playing = True
         music.play(track_id=sound_normal_alarm)
         led.duty(1000)
 
 # Stop the alarm
 def stop_alarm():
-    global isPlaying
-    if isPlaying:
-        isPlaying = False
+    global is_playing
+    if is_playing:
+        is_playing = False
         music.stop()
         led.duty(0)
 
 def check_pressure_mat():
-    global isPlaying
+    global is_playing
     if pressure_mat.value(): # play only if user is in bed
-        if isPlaying:
+        if is_playing:
             stop_alarm()
     else:  #TODO: remove this after testing
-        if not isPlaying:
+        if not is_playing and alarm_go:
             start_alarm()
 
 # Main function
@@ -219,6 +248,7 @@ def main():
                 publish_sensor_data(sensor_state=sensor_state, ip=ip, mac=mac, client=client)
 
             check_pressure_mat()
+            print("sampling rate is", sampling_rate)
             sleep(sampling_rate)
         except OSError as e:
             if not use_http:

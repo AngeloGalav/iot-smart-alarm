@@ -234,13 +234,35 @@ def stop_alarm():
     logging.info(f"Stopping alarm running on the esp32.")
     mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "stop_alarm"}))
 
-@app.route('/switch_protocol', methods=['POST'])
-def switch_protocol():
+@app.route('/send_settings', methods=['POST'])
+def send_settings():
     '''
     Stops alarm running on the esp32.
     '''
     logging.info(f"Switched alarm data transmission protocol.")
-    mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "switch_protocol"}))
+    try:
+        data = request.get_json()
+        use_mqtt = data.get('use_mqtt')
+        use_async_http = data.get('use_async_http')
+        angry_mode = data.get('angry_mode')
+        sampling_rate = data.get('sampling_rate')
+        if use_mqtt is None or use_async_http is None or angry_mode is None:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        settings = {
+            "command": "settings",
+            'use_mqtt' : use_mqtt,
+            'use_async_http' : use_async_http,
+            'angry_mode' : angry_mode,
+            'samplingRate' : sampling_rate
+        }
+        mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps(settings))
+        logging.info(f"Published settings: {settings} to topic {MQTT_TOPIC_COMMAND}")
+
+        return jsonify({"status": "success", "message": f"Settings set to {settings}"}), 200
+
+    except Exception as e:
+        logging.error(f"Error in /sample_rate endpoint: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/sampling_rate', methods=['POST'])
 def sampling_rate():
@@ -249,11 +271,11 @@ def sampling_rate():
     '''
     try:
         data = request.get_json()
-        sample_rate_val = data.get('sampling_rate')
-        if not isinstance(sample_rate_val, int) or sample_rate_val <= 0:
+        sample_rate_val = float(data.get('sampling_rate'))
+        if sample_rate_val <= 0.01 or sample_rate_val > 10:
             return jsonify({"status": "error", "message": "'sample_rate' must be a positive integer"}), 400
 
-        mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "sample_rate", "value": sample_rate_val}))
+        mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "sampling_rate", "value": sample_rate_val}))
         logging.info(f"Published sample rate: {sample_rate_val} to topic {MQTT_TOPIC_COMMAND}")
 
         return jsonify({"status": "success", "message": f"Sample rate set to {sample_rate_val}"}), 200

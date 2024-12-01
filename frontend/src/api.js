@@ -33,6 +33,27 @@ const api = {
     const response = await axios.delete(`${API_HOSTNAME}/alarms/${id}`);
     return response.data;
   },
+
+  sendSamplingRate: async (sampling_rate) => {
+    const response = await axios.post(`${API_HOSTNAME}/sampling_rate`, sampling_rate);
+    return response.data;
+  },
+
+  sendSettings: async (settings) => {
+    const response = await axios.post(`${API_HOSTNAME}/send_settings`, settings);
+    return response.data;
+  },
+
+  stopAlarm: async () => {
+    const response = await axios.post(`${API_HOSTNAME}/stop_alarm`);
+    return response.data;
+  },
+
+  startAlarm: async () => {
+    const response = await axios.post(`${API_HOSTNAME}/start_alarm`);
+    return response.data;
+  },
+
 };
 
 export default api;

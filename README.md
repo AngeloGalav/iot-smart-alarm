@@ -22,6 +22,9 @@ docker-compose up --build
 ```
 
 ## Tasks
+- IMPORTANT!!!
+ - [ ] moving average/find alarm go substitute
+ - [ ] sampling rate in another thread?
 
 - [ ] ESP32 alarm
   - [x] complete hardware
@@ -43,6 +46,7 @@ docker-compose up --build
   - [x] integrate it with the webapp
   - [x] weather api integration
   - [x] add alarm code
+  - [ ] test start/stop alarm
 
 - [ ] influxdb
   - [x] setup influxdb instance to collect data
