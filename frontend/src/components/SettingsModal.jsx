@@ -11,6 +11,7 @@ const SettingsModal = ({
   const [useMQTT, setUseMQTT] = useState(false);
   const [useAsyncHTTP, setUseAsyncHTTP] = useState(false);
   const [samplingRate, setSamplingRate] = useState(1);
+  const [samplingRateError, setSamplingRateError] = useState("");
 
   // Stop the active alarm
   const stopActiveAlarm = async () => {
@@ -22,9 +23,21 @@ const SettingsModal = ({
     }
   };
 
+  const validateSamplingRate = () => {
+    const rate = parseFloat(samplingRate);
+    if (rate < 0.01 || rate > 10) {
+      setSamplingRateError("Sampling rate must be between 0.01 and 10.");
+      return false;
+    }
+    setSamplingRateError("");
+    return true;
+  };
+
   const sendSamplingRate = async () => {
+    if (!validateSamplingRate()) return;
+
     try {
-      await api.sendSamplingRate({ sampling_rate: samplingRate });
+      await api.sendSamplingRate({ sampling_rate: parseFloat(samplingRate) });
       console.log("Sampling rate sent successfully");
     } catch (error) {
       console.error("Error sending sampling rate:", error);
@@ -33,6 +46,7 @@ const SettingsModal = ({
 
   // Save settings from modal
   const saveSettings = async () => {
+    if (!validateSamplingRate()) return;
     const settings = {
       command: "settings",
       use_mqtt: useMQTT,
@@ -123,11 +137,18 @@ const SettingsModal = ({
             </label>
             <input
               type="text"
-              className="input input-bordered bg-gray-700 text-gray-200"
+              className={`input input-bordered ${
+                samplingRateError ? "border-red-500" : "bg-gray-700"
+              } text-gray-200`}
               placeholder="1"
               value={samplingRate}
               onChange={(e) => setSamplingRate(e.target.value)}
             />
+            {samplingRateError && (
+              <span className="text-red-500 text-sm mt-1">
+                {samplingRateError}
+              </span>
+            )}
           </div>
 
           {/* Stop Current Active Alarm */}

@@ -37,7 +37,7 @@ music.stop()
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
-music.volume(20)
+music.volume(10) # TODO: set it to 20 after testing
 is_playing = False
 # REMEMBER TO SET THIS TO FALSE IN SPECIFIC CONDITIONS THANKS!!!!!!!!!!!!!
 alarm_go = True
@@ -58,18 +58,18 @@ def led_fade():
         led.duty(duty_cycle)
         sleep(0.01)
 
-def connect_wifi(static_ip=None):
+def connect_wifi(static_ip=None, hostname='esp32_alarm'):
     wlan = network.WLAN(network.STA_IF) # esp32 in station mode
     wlan.active(True)
 
     # configure static IP if not none
-    if static_ip:
-        ip, subnet, gateway, dns = static_ip
-        wlan.ifconfig((ip, subnet, gateway, dns))
-        print("Configured with Static IP:", wlan.ifconfig())
-    else:
-        print("Using DHCP for IP assignment")
-
+    # if static_ip:
+    #     ip, subnet, gateway, dns = static_ip
+    #     wlan.ifconfig((ip, subnet, gateway, dns))
+    #     print("Configured with Static IP:", wlan.ifconfig())
+    # else:
+    #     print("Using DHCP for IP assignment")
+    wlan.config(dhcp_hostname = hostname)
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
 
     # wait for wifi
@@ -80,8 +80,9 @@ def connect_wifi(static_ip=None):
     mac = wlan.config('mac').hex()
     # if connected play chime
     music.play(track_id=sound_connection_ok)
+    host = wlan.config('dhcp_hostname')
     print(f"Connected to Wi-Fi\nMy MAC Address is: {mac}")
-    print("Network config:", wlan.ifconfig())
+    print("Network config:", wlan.ifconfig(), 'hostname: ', host)
     sleep(3)
     return wlan.ifconfig()[0], mac
 
@@ -228,7 +229,8 @@ def check_pressure_mat():
 
 # Main function
 def main():
-    ip, mac = connect_wifi(static_ip=static_ip_config)
+    ip, mac = connect_wifi(static_ip=None)
+
     music.play(track_id=sound_wait_mqtt)
     broker_ip = start_server()
     client = connect_mqtt(broker_ip=broker_ip)

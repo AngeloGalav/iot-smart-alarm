@@ -34,7 +34,7 @@ except Exception as e:
 CORS(app) # enable CORS for all routes
 
 # ESP32 network info
-ESP32_IP = "192.168.148.56"
+ESP32_IP = "esp32_alarm.local"
 ESP32_PORT = 8080
 
 # InfluxDB configuration
@@ -178,7 +178,7 @@ def get_alarms():
     '''
     Returns all alarms.
     '''
-    return jsonify(alarms)
+    return jsonify(alarms), 200
 
 @app.route('/alarms/<int:alarm_id>', methods=['PUT'])
 def modify_alarm(alarm_id):
@@ -232,7 +232,12 @@ def stop_alarm():
     Stops alarm running on the esp32.
     '''
     logging.info(f"Stopping alarm running on the esp32.")
-    mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "stop_alarm"}))
+    try :
+        mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "stop_alarm"}))
+        return jsonify({"status": "success", "message": "Alarm stopped successfully"}), 200
+    except Exception as e:
+        logging.error(f"Error sending MQTT to broker: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/send_settings', methods=['POST'])
 def send_settings():

@@ -1,20 +1,21 @@
 services:
-
-  iot-backend-server:
-    build:
-      context: ./backend
-    container_name: iot-backend-server
-    ports:
-      # - "1883:1883"
-      - "5000:5000"
-    depends_on:
-      - mqtt-broker
-    volumes:
-      - ./backend:/app
-    environment:
-      - MQTT_BROKER_HOST=mqtt-broker
-      - MQTT_BROKER_PORT=1883
-      - FLASK_APP_PORT=5000
+  # iot-backend-server:
+  #   build:
+  #     context: ./backend
+  #   container_name: iot-backend-server
+  #   ports:
+  #     # - "1883:1883"
+  #     - "5000:5000"
+  #   depends_on:
+  #     - mqtt-broker
+  #   volumes:
+  #     - ./backend:/app
+  #   environment:
+  #     - MQTT_BROKER_HOST=mqtt-broker
+  #     - MQTT_BROKER_PORT=1883
+  #     - FLASK_APP_PORT=5000
+  #   dns:
+  #     - 127.0.0.1  # Use the host's DNS resolver
 
   iot-frontend-react:
     build:
@@ -61,9 +62,20 @@ services:
       - "3001:3000"
     volumes:
       - ./grafana/data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning  # Provisioning files
+      - ./grafana/dashboards:/var/lib/grafana/dashboards  # Dashboards
     depends_on:
       - influxdb
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
       - GF_LOG_LEVEL=error
+
+  telegram-bot:
+    build:
+      context: ./telegram_bot
+    container_name: telegram-bot
+    network_mode: "host"
+    environment:
+      - BACKEND_HOST=localhost
+      - BACKEND_PORT=5000

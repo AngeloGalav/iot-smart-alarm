@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . /app
 
-RUN pip install python-telegram-bot
+RUN pip install python-telegram-bot requests
 
-CMD ["python", "telegram_bot.py"]
+CMD ["python", "bot.py"]
