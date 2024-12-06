@@ -251,14 +251,17 @@ def send_settings():
         use_async_http = data.get('use_async_http')
         angry_mode = data.get('angry_mode')
         sampling_rate = data.get('sampling_rate')
-        if use_mqtt is None or use_async_http is None or angry_mode is None:
+        w_size = data.get('w_size')
+
+        if use_mqtt is None or use_async_http is None or angry_mode is None or w_size is None or sampling_rate is None:
             return jsonify({"status": "error", "message": "Missing required fields"}), 400
         settings = {
             "command": "settings",
             'use_mqtt' : use_mqtt,
             'use_async_http' : use_async_http,
             'angry_mode' : angry_mode,
-            'samplingRate' : sampling_rate
+            'samplingRate' : sampling_rate,
+            'w_size': int(w_size)
         }
         mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps(settings))
         logging.info(f"Published settings: {settings} to topic {MQTT_TOPIC_COMMAND}")

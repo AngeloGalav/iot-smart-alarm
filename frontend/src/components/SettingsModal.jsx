@@ -11,7 +11,10 @@ const SettingsModal = ({
   const [useMQTT, setUseMQTT] = useState(false);
   const [useAsyncHTTP, setUseAsyncHTTP] = useState(false);
   const [samplingRate, setSamplingRate] = useState(1);
+  const [windowSize, setWindowSize] = useState(10);
   const [samplingRateError, setSamplingRateError] = useState("");
+  const [wSizeError, setWSizeError] = useState("");
+
 
   // Stop the active alarm
   const stopActiveAlarm = async () => {
@@ -33,6 +36,17 @@ const SettingsModal = ({
     return true;
   };
 
+  const validateWSize = () => {
+    const rate = parseFloat(windowSize);
+    if (rate <= 0) {
+      setWSizeError("Window size must be a positive number (integers will be rounded)");
+      return false;
+    }
+    setWSizeError("");
+    return true;
+  };
+
+
   const sendSamplingRate = async () => {
     if (!validateSamplingRate()) return;
 
@@ -47,12 +61,15 @@ const SettingsModal = ({
   // Save settings from modal
   const saveSettings = async () => {
     if (!validateSamplingRate()) return;
+    if (!validateWSize()) return;
+
     const settings = {
       command: "settings",
       use_mqtt: useMQTT,
       use_async_http: useAsyncHTTP,
       angry_mode: angryMode,
       sampling_rate: samplingRate,
+      w_size : windowSize
     };
 
     try {
@@ -151,8 +168,29 @@ const SettingsModal = ({
             )}
           </div>
 
-          {/* Stop Current Active Alarm */}
+          {/* Moving Avg Window Size */}
           <div className="form-control">
+            <label className="label">
+              <span className="label-text text-gray-200">Moving Average Window Size</span>
+            </label>
+            <input
+              type="text"
+              className={`input input-bordered ${
+                wSizeError ? "border-red-500" : "bg-gray-700"
+              } text-gray-200`}
+              placeholder="1"
+              value={windowSize}
+              onChange={(e) => setWindowSize(e.target.value)}
+            />
+            {wSizeError && (
+              <span className="text-red-500 text-sm mt-1">
+                {wSizeError}
+              </span>
+            )}
+          </div>
+
+          {/* Stop Current Active Alarm */}
+          <div className="form-control mt-4">
             <button
               className="btn btn-warning w-full"
               onClick={stopActiveAlarm}

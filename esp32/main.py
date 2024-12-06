@@ -1,6 +1,6 @@
 from dfplayermini import Player
 from machine import Pin, PWM
-from time import sleep
+from time import sleep, ticks_ms
 import network
 import socket
 import urequests  # MicroPython HTTP library
@@ -37,11 +37,16 @@ music.stop()
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 
-music.volume(10) # TODO: set it to 20 after testing
+music.volume(10)
 is_playing = False
-# REMEMBER TO SET THIS TO FALSE IN SPECIFIC CONDITIONS THANKS!!!!!!!!!!!!!
+
 alarm_go = True
 alarm_ringing = False
+
+# running average
+w_size = 10           # running avg window size
+start_thresh = 0.7    # trigger alarm if average exceeds this
+sensor_readings = []
 
 # settings
 use_http = True
@@ -62,13 +67,7 @@ def connect_wifi(static_ip=None, hostname='esp32_alarm'):
     wlan = network.WLAN(network.STA_IF) # esp32 in station mode
     wlan.active(True)
 
-    # configure static IP if not none
-    # if static_ip:
-    #     ip, subnet, gateway, dns = static_ip
-    #     wlan.ifconfig((ip, subnet, gateway, dns))
-    #     print("Configured with Static IP:", wlan.ifconfig())
-    # else:
-    #     print("Using DHCP for IP assignment")
+    # set hostname for dynamic connection
     wlan.config(dhcp_hostname = hostname)
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
 
@@ -129,16 +128,17 @@ def connect_mqtt(broker_ip):
 
 # handle incoming MQTT messages
 def mqtt_callback(topic, msg):
-    global use_http, http_async, angry_mode, sampling_rate
+    global use_http, http_async, angry_mode, sampling_rate, alarm_go, w_size
 
     msg = msg.decode("utf-8")
     print(f"Received message on topic {topic.decode('utf-8')}: {msg}")
     data = json.loads(msg)  # Parse the JSON data
 
     if "trigger_alarm" in msg:
-        start_alarm()
+        alarm_go = True
     elif "stop_alarm" in msg:
         stop_alarm()
+        alarm_go = False
     elif "sampling_rate" in msg:
         try:
             val_to_clean = msg.split(":")[-1]
@@ -166,6 +166,10 @@ def mqtt_callback(topic, msg):
             if 'samplingRate' in data:
                 sampling_rate = float(data['samplingRate'])
                 print(f"Sampling rate set to {sampling_rate}")
+
+            if 'w_size' in data:
+                w_size = int(data['w_size'])
+                print(f"Window size set to {w_size}")
         except Exception as e:
             print(f"Error processing MQTT message: {e}")
 
@@ -219,13 +223,27 @@ def stop_alarm():
         led.duty(0)
 
 def check_pressure_mat():
-    global is_playing
-    if pressure_mat.value(): # play only if user is in bed
-        if is_playing:
-            stop_alarm()
-    else:  #TODO: remove this after testing
-        if not is_playing and alarm_go:
-            start_alarm()
+    global is_playing, sensor_readings, alarm_go
+
+    # update the sliding window
+    if len(sensor_readings) >= w_size:
+        sensor_readings.pop(0)  # Remove the oldest reading
+
+    # add sensor state
+    sensor_state = not pressure_mat.value()
+    sensor_readings.append(sensor_state)
+
+    # compute running average
+    running_average = sum(sensor_readings) / len(sensor_readings)
+    print(f"Running Average: {running_average:.2f}")
+
+    # trigger alarm based on flags
+    if running_average > start_thresh and alarm_go:
+        start_alarm()
+    elif running_average < (1-start_thresh) and is_playing:
+        stop_alarm()
+        alarm_go = False
+
 
 # Main function
 def main():
@@ -240,7 +258,7 @@ def main():
         try:
             client.check_msg()  # Check for incoming MQTT messages
 
-            # Send sensor state to HTTP or MQTT broker
+            # send sensor state to HTTP or MQTT broker
             sensor_state = not pressure_mat.value()
             if use_http:
                 # use http for sensor data
@@ -250,7 +268,7 @@ def main():
                 publish_sensor_data(sensor_state=sensor_state, ip=ip, mac=mac, client=client)
 
             check_pressure_mat()
-            print("sampling rate is", sampling_rate)
+            print("TICK!")
             sleep(sampling_rate)
         except OSError as e:
             if not use_http:
