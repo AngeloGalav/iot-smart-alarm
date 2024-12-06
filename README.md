@@ -27,7 +27,7 @@ To do so, you'll first need to connect the ESP32 to the network. Then, open the 
 ```
 >>> import mip
 >>> mip.install("github:cbrand/micropython-mdns")
-``` 
+```
 
 ## Tasks
 - IMPORTANT!!!
@@ -42,7 +42,7 @@ To do so, you'll first need to connect the ESP32 to the network. Then, open the 
     - [x] trigger_alarm (triggers alarm until user gets up)
     - [x] stop_alarm
   - [x] write alarm code
-  - [ ] write AI alarm prediction code?
+  - [x] write AI alarm prediction code?
   - [ ] implement angry mode
   - [ ] add repeat sound
   - [x] add second sound for mqtt connection
@@ -80,6 +80,18 @@ To do so, you'll first need to connect the ESP32 to the network. Then, open the 
 
 - [x] Telegram Bot
   - [x] Do bot
+
+
+- TESTS:
+  - [ ] test alarm logic (two alarms close to each other)
+  - [ ] test weather time
+  - [ ] test grafana
+  - [ ] test stop alarm
+  - [ ] test angry mode
+
+- File transf
+  - [ ] add ringtones for differnet weathers
+  - [ ] increase ringtones length
 
 ### Resources
 dfplayermini library here: https://github.com/lavron/micropython-dfplayermini

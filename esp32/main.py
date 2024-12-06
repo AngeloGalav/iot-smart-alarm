@@ -1,6 +1,6 @@
 from dfplayermini import Player
 from machine import Pin, PWM
-from time import sleep, ticks_ms
+from time import sleep, ticks_ms, ticks_diff
 import network
 import socket
 import urequests  # MicroPython HTTP library
@@ -9,19 +9,15 @@ import uasyncio as asyncio
 from esp_secrets import WIFI_SSID, WIFI_PASSWORD
 import json
 
-# Network setup
-static_ip_config = (
-    "192.168.148.56",  # IP Address for ESP32
-    "255.255.255.0", # Subnet mask
-    "192.168.254.2",
-    "192.168.254.2"
-)
-
 # Hardware setup
 sensor_name = "sensorino_esp32"
 pressure_mat = Pin(18, Pin.IN, Pin.PULL_DOWN)
 led = PWM(Pin(2), freq=1000)
 music = Player(pin_TX=17, pin_RX=16)
+
+# angry mode configs
+alarm_start_time = None  # To track when the alarm started
+angry_timeout = 30000    # Timeout for angry mode in milliseconds (30 seconds)
 
 # chimes ids setup
 sound_angry_alarm = 1
@@ -30,12 +26,26 @@ sound_connection_ok = 4
 sound_wait_mqtt = 5
 sound_connection_complete = 3
 
+sound_alarm_rainy = ...
+sound_alarm_cloudy = ...
+sound_alarm_sunny = ...
+
+ringtones = {
+    'sunny' : sound_alarm_rainy,
+    'rainy' : sound_alarm_cloudy,
+    'cloudy' : sound_alarm_sunny
+}
+
+current_alarm_song = sound_normal_alarm
+
 # stops any previously running sounds on the player
 music.stop()
 
 # MQTT setup
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
+MQTT_TOPIC_WEATHER = "iot_alarm/weather"
+MQTT_TOPIC_SETTINGS = "iot_alarm/settings"
 
 music.volume(10)
 is_playing = False
@@ -122,57 +132,67 @@ def connect_mqtt(broker_ip):
     client.connect()
     # if connected play chime
     client.subscribe(MQTT_TOPIC_COMMAND)
+    client.subscribe(MQTT_TOPIC_WEATHER)
     print("Connected to MQTT broker")
     music.play(track_id=sound_connection_complete)
     return client
 
 # handle incoming MQTT messages
 def mqtt_callback(topic, msg):
-    global use_http, http_async, angry_mode, sampling_rate, alarm_go, w_size
+    global use_http, http_async, angry_mode, sampling_rate, alarm_go, w_size, current_alarm_song
 
     msg = msg.decode("utf-8")
     print(f"Received message on topic {topic.decode('utf-8')}: {msg}")
-    data = json.loads(msg)  # Parse the JSON data
 
-    if "trigger_alarm" in msg:
-        alarm_go = True
-    elif "stop_alarm" in msg:
-        stop_alarm()
-        alarm_go = False
-    elif "sampling_rate" in msg:
+    if topic == MQTT_TOPIC_COMMAND :
+        if "trigger_alarm" in msg:
+            alarm_go = True
+        elif "stop_alarm" in msg:
+            stop_alarm()
+            alarm_go = False
+        elif "sampling_rate" in msg:
+            try:
+                val_to_clean = msg.split(":")[-1]
+                number = ''.join(c for c in val_to_clean if c.isdigit() or c == '.')
+                sampling_rate = float(number)
+                print(f"Sampling rate set to {sampling_rate} seconds")
+            except ValueError:
+                print("Invalid sampling rate received", sampling_rate)
+        else:
+            # handling settings
+            try:
+                data = json.loads(msg)
+                if 'use_mqtt' in data:
+                    use_http = not data['use_mqtt']
+                    print(f"Data trasnmission protocol set to: {'HTTP' if use_http else 'MQTT'}")
+
+                if 'use_async_http' in data:
+                    http_async = data['use_async_http']
+                    print(f"HTTP mode set to: {'async' if http_async else 'normal'}")
+
+                if 'angry_mode' in data:
+                    angry_mode = data['angry_mode']
+                    print(f"Angry mode {'enabled' if angry_mode else 'disabled'}")
+
+                if 'samplingRate' in data:
+                    sampling_rate = float(data['samplingRate'])
+                    print(f"Sampling rate set to {sampling_rate}")
+
+                if 'w_size' in data:
+                    w_size = int(data['w_size'])
+                    print(f"Window size set to {w_size}")
+            except Exception as e:
+                print(f"Error processing MQTT message: {e}")
+    elif topic == MQTT_TOPIC_WEATHER:
         try:
-            val_to_clean = msg.split(":")[-1]
-            number = ''.join(c for c in val_to_clean if c.isdigit() or c == '.')
-            sampling_rate = float(number)
-            print(f"Sampling rate set to {sampling_rate} seconds")
-        except ValueError:
-            print("Invalid sampling rate received", sampling_rate)
-    else:
-        # handling settings
-        try:
-            data = json.loads(msg)
-            if 'use_mqtt' in data:
-                use_http = not data['use_mqtt']
-                print(f"Data trasnmission protocol set to: {'HTTP' if use_http else 'MQTT'}")
-
-            if 'use_async_http' in data:
-                http_async = data['use_async_http']
-                print(f"HTTP mode set to: {'async' if http_async else 'normal'}")
-
-            if 'angry_mode' in data:
-                angry_mode = data['angry_mode']
-                print(f"Angry mode {'enabled' if angry_mode else 'disabled'}")
-
-            if 'samplingRate' in data:
-                sampling_rate = float(data['samplingRate'])
-                print(f"Sampling rate set to {sampling_rate}")
-
-            if 'w_size' in data:
-                w_size = int(data['w_size'])
-                print(f"Window size set to {w_size}")
+            data = json.loads(msg)  # Assuming the message is JSON-formatted
+            if "weather" in data:
+                weather = data["weather"]
+                current_alarm_song = ringtones.get(weather, sound_normal_alarm)
+            else:
+                print("Weather condition key not found in the message")
         except Exception as e:
-            print(f"Error processing MQTT message: {e}")
-
+            print(f"Error processing MQTT weather message: {e}")
 
 async def async_http_post(url, data):
     global sampling_rate
@@ -208,17 +228,23 @@ def publish_sensor_data(sensor_state, ip, mac, client=None, broker_ip=None):
 
 # Start the alarm
 def start_alarm():
-    global is_playing
+    global is_playing, alarm_start_time
     if not is_playing:
         is_playing = True
-        music.play(track_id=sound_normal_alarm)
+        alarm_start_time = ticks_ms()
+        music.play(track_id=current_alarm_song)
         led.duty(1000)
+    else:
+        if angry_mode and ticks_diff(ticks_ms(), alarm_start_time) > angry_timeout:
+                music.play(track_id=sound_angry_alarm)  # Play angry alarm
+                print("Angry mode activated! Playing angry alarm.")
 
 # Stop the alarm
 def stop_alarm():
-    global is_playing
+    global is_playing, alarm_start_time
     if is_playing:
         is_playing = False
+        alarm_start_time = None
         music.stop()
         led.duty(0)
 

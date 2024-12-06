@@ -47,6 +47,7 @@ INFLUXDB_ORG = os.getenv("DOCKER_INFLUXDB_INIT_ORG", "iot-org")
 # MQTT topics
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
+MQTT_TOPIC_WEATHER = "iot_alarm/weather"
 
 # flags
 alarm_triggered = False
@@ -302,6 +303,7 @@ def alarm_clock():
     global alarms, alarm_triggered
 
     mqtt_utils.send_broker_ip(alarm_ip=ESP32_IP, alarm_port=ESP32_PORT)
+    saved_time = ""
 
     while True:
         now = datetime.now()
@@ -313,10 +315,17 @@ def alarm_clock():
             if alarm["active"] and alarm["time"] == current_time \
                 and ((current_weekday in wk_days_cache) or wk_days_cache == []):
                     # if wkd == [], then no repetition schedule is set: it will be repeated everyday
+                    alarm_triggered = (saved_time == current_time)
                     if not alarm_triggered:
-                        alarm_triggered = True
+                        saved_time = current_time
+                        # attempt to get weather data
+                        weather_data = get_weather_data()
+                        if weather_data:
+                            mqtt.publish(MQTT_TOPIC_WEATHER, json.dumps({"weather": weather_data}))
+
                         logging.info(f"Alarm {alarm['id']} triggered at {current_time} on weekday {current_weekday}")
                         mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps({"command": "trigger_alarm"}))
+
         time.sleep(10)  # check every 10 seconds, to make it less expensive
 
 

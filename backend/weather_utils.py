@@ -24,13 +24,11 @@ def get_weather_data(latitude=43.6158, longitude=13.5189):
         cloud_cover = hourly_data.get('cloudcover', [])[0]
 
         if precipitation_probability > 50:
-            weather_condition = "Rainy"
+            weather_condition = "rainy"
         elif cloud_cover < 30:
-            weather_condition = "Sunny"
-        elif cloud_cover >= 30 and cloud_cover <= 70:
-            weather_condition = "Partly Cloudy"
+            weather_condition = "sunny"
         else:
-            weather_condition = "Cloudy"
+            weather_condition = "cloudy"
 
         return weather_condition
     else:
