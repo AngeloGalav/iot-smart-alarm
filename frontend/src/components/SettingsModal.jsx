@@ -14,6 +14,7 @@ const SettingsModal = ({
   const [windowSize, setWindowSize] = useState(10);
   const [samplingRateError, setSamplingRateError] = useState("");
   const [wSizeError, setWSizeError] = useState("");
+  const [volume, setVolume] = useState(20);
 
 
   // Stop the active alarm
@@ -69,7 +70,8 @@ const SettingsModal = ({
       use_async_http: useAsyncHTTP,
       angry_mode: angryMode,
       sampling_rate: samplingRate,
-      w_size : windowSize
+      w_size : windowSize,
+      vol : volume
     };
 
     try {
@@ -189,6 +191,23 @@ const SettingsModal = ({
             )}
           </div>
 
+          {/* Volume Slider */}
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text text-gray-200">Alarm Volume</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="50"
+              value={volume}
+              className="range range-primary"
+              onChange={(e) => setVolume(Number(e.target.value))}
+            />
+            <div className="text-center text-gray-200">{volume}</div>
+          </div>
+
+
           {/* Stop Current Active Alarm */}
           <div className="form-control mt-4">
             <button
@@ -199,21 +218,10 @@ const SettingsModal = ({
             </button>
           </div>
 
-          {/* Delete All Alarms */}
-          <div className="form-control">
-            <button
-              className="btn btn-error w-full"
-              onClick={onDeleteAllAlarms}
-            >
-              Delete All Alarms
-            </button>
-          </div>
-
-
           {/* Send Sampling Rate */}
           <div className="form-control">
             <button
-              className="btn btn-primary w-full"
+              className="btn btn-secondary w-full"
               onClick={sendSamplingRate}
             >
               Send Sampling Rate to ESP32

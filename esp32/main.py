@@ -20,23 +20,22 @@ alarm_start_time = None  # To track when the alarm started
 angry_timeout = 30000    # Timeout for angry mode in milliseconds (30 seconds)
 
 # chimes ids setup
-sound_angry_alarm = 1
-sound_normal_alarm = 2
-sound_connection_ok = 4
+sound_angry_alarm = 2
+sound_connection_ok = 1
 sound_wait_mqtt = 5
 sound_connection_complete = 3
 
-sound_alarm_rainy = ...
-sound_alarm_cloudy = ...
-sound_alarm_sunny = ...
+sound_alarm_rainy = 7
+sound_alarm_cloudy = 4
+sound_alarm_sunny = 6
 
 ringtones = {
-    'sunny' : sound_alarm_rainy,
-    'rainy' : sound_alarm_cloudy,
-    'cloudy' : sound_alarm_sunny
+    'sunny' : sound_alarm_sunny,
+    'rainy' : sound_alarm_rainy,
+    'cloudy' : sound_alarm_cloudy
 }
 
-current_alarm_song = sound_normal_alarm
+current_alarm_song = ringtones['sunny']
 
 # stops any previously running sounds on the player
 music.stop()
@@ -45,12 +44,12 @@ music.stop()
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 MQTT_TOPIC_WEATHER = "iot_alarm/weather"
-MQTT_TOPIC_SETTINGS = "iot_alarm/settings"
 
-music.volume(10)
+music.volume(20)
 is_playing = False
+is_angry_playing = False
 
-alarm_go = True
+alarm_go = False
 alarm_ringing = False
 
 # running average
@@ -80,6 +79,8 @@ def connect_wifi(static_ip=None, hostname='esp32_alarm'):
     # set hostname for dynamic connection
     wlan.config(dhcp_hostname = hostname)
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    
+    print("Looking for WiFi...")
 
     # wait for wifi
     while not wlan.isconnected():
@@ -142,7 +143,8 @@ def mqtt_callback(topic, msg):
     global use_http, http_async, angry_mode, sampling_rate, alarm_go, w_size, current_alarm_song
 
     msg = msg.decode("utf-8")
-    print(f"Received message on topic {topic.decode('utf-8')}: {msg}")
+    topic = topic.decode('utf-8')
+    print(f"Received message on topic {topic}: {msg}")
 
     if topic == MQTT_TOPIC_COMMAND :
         if "trigger_alarm" in msg:
@@ -188,7 +190,7 @@ def mqtt_callback(topic, msg):
             data = json.loads(msg)  # Assuming the message is JSON-formatted
             if "weather" in data:
                 weather = data["weather"]
-                current_alarm_song = ringtones.get(weather, sound_normal_alarm)
+                current_alarm_song = ringtones.get(weather, current_alarm_song)
             else:
                 print("Weather condition key not found in the message")
         except Exception as e:
@@ -228,29 +230,30 @@ def publish_sensor_data(sensor_state, ip, mac, client=None, broker_ip=None):
 
 # Start the alarm
 def start_alarm():
-    global is_playing, alarm_start_time
+    global is_playing, alarm_start_time, is_angry_playing
     if not is_playing:
         is_playing = True
         alarm_start_time = ticks_ms()
         music.play(track_id=current_alarm_song)
         led.duty(1000)
     else:
-        if angry_mode and ticks_diff(ticks_ms(), alarm_start_time) > angry_timeout:
-                music.play(track_id=sound_angry_alarm)  # Play angry alarm
-                print("Angry mode activated! Playing angry alarm.")
+        if angry_mode and ticks_diff(ticks_ms(), alarm_start_time) > angry_timeout and not is_angry_playing:
+            music.play(track_id=sound_angry_alarm)  # Play angry alarm
+            print("Angry mode activated! Playing angry alarm.")
+            is_angry_playing = True
 
 # Stop the alarm
 def stop_alarm():
-    global is_playing, alarm_start_time
+    global is_playing, alarm_start_time, is_angry_playing
     if is_playing:
         is_playing = False
+        is_angry_playing = False
         alarm_start_time = None
         music.stop()
         led.duty(0)
 
 def check_pressure_mat():
     global is_playing, sensor_readings, alarm_go
-
     # update the sliding window
     if len(sensor_readings) >= w_size:
         sensor_readings.pop(0)  # Remove the oldest reading
@@ -271,7 +274,6 @@ def check_pressure_mat():
         alarm_go = False
 
 
-# Main function
 def main():
     ip, mac = connect_wifi(static_ip=None)
 

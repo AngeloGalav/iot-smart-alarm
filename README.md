@@ -31,9 +31,9 @@ To do so, you'll first need to connect the ESP32 to the network. Then, open the 
 
 ## Tasks
 - IMPORTANT!!!
- - [ ] moving average/find alarm go substitute
- - [ ] sampling rate in another thread?
+ - [x] moving average/find alarm go substitute
  - [ ] TEST GRAFANA!!!!!!!!!
+ - [ ] fix new sampling rate handling
 
 - [ ] ESP32 alarm
   - [x] complete hardware
@@ -43,37 +43,32 @@ To do so, you'll first need to connect the ESP32 to the network. Then, open the 
     - [x] stop_alarm
   - [x] write alarm code
   - [x] write AI alarm prediction code?
-  - [ ] implement angry mode
-  - [ ] add repeat sound
+  - [x] implement angry mode
+  - [x] add repeat sound
   - [x] add second sound for mqtt connection
 
 - [ ] data analysis
   - based on the sensor data collected, can determine the number of hours the user slept each day
+- [ ] evaluation metrics
+  1. Mean Latency of the data acquisition process (network latency to send data to the proxy).
+  2. Accuracy to detect if a person is in bed or not
 
 - [ ] Data proxy
   - [x] write server code, which receives data from the esp32 and sends it to influxdb
   - [x] integrate it with the webapp
   - [x] weather api integration
   - [x] add alarm code
-  - [ ] test start/stop alarm
+  - [x] test start/stop alarm
 
-- [ ] influxdb
+- [x] influxdb
   - [x] setup influxdb instance to collect data
 
 - [ ] grafana
   - [ ] develop a dashboard
 
-- [ ] evaluation metrics
-  1. Mean Latency of the data acquisition process (network latency to send data to the proxy).
-  2. Accuracy to detect if a person is in bed or not
 
 - [ ] Frontend
-  - [x] Fix footer and make it design coherent with the design of the app (and smaller)
-  - [x] Fix logo and about button (navbar) to make it design compatible with the rest of the frontend
-    - [x] move button to top left
-  - [x] alarm periodicity (based on day of the week)
-  - [x] add options menu for some useful commands? (i.e. stop all commands, enable angry mode...)
-  - [x] make options menu
+  - [ ] volume slider
 
 - [ ] Readme
   - [ ] make proper readme file
@@ -84,14 +79,15 @@ To do so, you'll first need to connect the ESP32 to the network. Then, open the 
 
 - TESTS:
   - [ ] test alarm logic (two alarms close to each other)
-  - [ ] test weather time
+  - [x] test weather time
   - [ ] test grafana
-  - [ ] test stop alarm
-  - [ ] test angry mode
+  - [x] test stop alarm
+  - [x] test angry mode
+  - [ ] test http response time
 
 - File transf
-  - [ ] add ringtones for differnet weathers
-  - [ ] increase ringtones length
+  - [x] add ringtones for differnet weathers
+  - [x] increase ringtones length
 
 ### Resources
 dfplayermini library here: https://github.com/lavron/micropython-dfplayermini
