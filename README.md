@@ -22,12 +22,8 @@ docker-compose up --build
 ```
 
 ## Setup
-To enable mDNS on the ESP32 alarm, you'll need to instal the import `micropython-mdns` package through `mip`.
-To do so, you'll first need to connect the ESP32 to the network. Then, open the `micropython` console on the ESP32 and install the package with these commands:
-```
->>> import mip
->>> mip.install("github:cbrand/micropython-mdns")
-```
+- InfluxDB
+- Grafana
 
 ## Tasks
 - IMPORTANT!!!
