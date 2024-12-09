@@ -1,5 +1,5 @@
-utils/*.exe
-utils/*.bin
+tools/*.exe
+tools/*.bin
 esp32/dfplayermini.py
 esp32/secrets.py
 esp32/esp_secrets.py
