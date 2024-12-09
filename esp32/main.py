@@ -45,7 +45,6 @@ MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 MQTT_TOPIC_WEATHER = "iot_alarm/weather"
 
-music.volume(20)
 is_playing = False
 is_angry_playing = False
 
@@ -62,6 +61,8 @@ use_http = True
 http_async = False
 angry_mode = False
 sampling_rate = 1
+alarm_volume = 20
+music.volume(alarm_volume)
 
 # led fade code for the connection step
 def led_fade():
@@ -183,6 +184,12 @@ def mqtt_callback(topic, msg):
                 if 'w_size' in data:
                     w_size = int(data['w_size'])
                     print(f"Window size set to {w_size}")
+
+                if 'vol' in data:
+                    alarm_volume = int(data['vol'])
+                    music.volume(alarm_volume)
+                    print(f"Volume set to {alarm_volume}")
+
             except Exception as e:
                 print(f"Error processing MQTT message: {e}")
     elif topic == MQTT_TOPIC_WEATHER:
