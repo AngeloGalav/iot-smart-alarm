@@ -22,6 +22,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Hello! I'm your Alarm Bot. Here are the commands you can use:\n"
                               "/add_alarm HH:MM weekdays (e.g., /add_alarm 07:30 1,2,3)\n"
                               "/delete_alarm <alarm_id>\n"
+                              "/toggle_alarm <alarm_id>\n"
                               "/update_alarm <alarm_id> HH:MM weekdays\n"
                               "/stop_alarm\n"
                               "/list_alarms")
