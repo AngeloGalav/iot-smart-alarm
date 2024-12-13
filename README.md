@@ -29,9 +29,9 @@ docker-compose up --build
 ## Accuracy script
 To run the accuracy script, make sure that the InfluxDB instance is up and running. Then, simply use the script in this way:
 ```
-python accuracy_script.py [hours slept]
+python sleep_accuracy.py [hours slept]
 ```
-E.g. `python accuracy_script.py 8.0`
+E.g. `python sleep_accuracy.py 8.0`
 
 
 ## Tasks

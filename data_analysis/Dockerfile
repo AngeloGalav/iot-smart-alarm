@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . /app
 
-RUN pip install paho-mqtt numpy requests influxdb-client flask Flask-MQTT flask-cors
+RUN pip install paho-mqtt numpy pandas requests influxdb-client flask Flask-MQTT flask-cors
 
 CMD ["python", "server.py"]

@@ -4,6 +4,8 @@ import { IoRainy } from "react-icons/io5";
 import { IoMdCloudy } from "react-icons/io";
 import { IoIosSunny } from "react-icons/io";
 import { GiNightSleep } from "react-icons/gi";
+import { GiBrain } from "react-icons/gi";
+import { IoMdTimer } from "react-icons/io";
 
 const InfoModal = ({
   isOpen,
@@ -16,6 +18,7 @@ const InfoModal = ({
   const [location, setLocation] = useState("Bologna");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputLocation, setInputLocation] = useState("Bologna");
+  const [bedPrediction, setBedPrediction] = useState(null);
 
 
   const grafanaAddress = process.env.REACT_APP_GRAFANA_ADDRESS || 'localhost:3001';
@@ -25,14 +28,26 @@ const InfoModal = ({
       try {
         const weatherData = await api.getWeather();
         const delayData = await api.getDelay();
-        const sleepData = await api.getSleepData();
         setWeather(weatherData.weather);
         setDelay(delayData.delay.toFixed(2));
-        if (sleepData !== null) {
-          setHoursSlept(sleepData.sleep);
-        }
       } catch (error) {
-        console.error("Error setting information:", error);
+        console.error("Error setting weather or delay information:", error);
+      }
+      // sperate request most likely to fail
+      try {
+        const sleepData = await api.getSleepData();
+        console.log(sleepData)
+        setHoursSlept(sleepData.sleep.toFixed(2));
+      } catch (error) {
+        console.error("Error setting sleep information:", error);
+        setHoursSlept(null);
+      }
+      try {
+        const bedPredictionData = await api.getBedPrediction();
+        setBedPrediction(bedPredictionData.likelihood.toFixed(2));
+      } catch (error) {
+        console.error("Error setting prediction information:", error);
+        setBedPrediction(null);
       }
     }
   };
@@ -108,8 +123,11 @@ const InfoModal = ({
         <h2 className="text-2xl font-bold mb-4">Information</h2>
         {/* Modal Footer */}
         <div className={`my-6 flex justify-center w-full space-x-6 text-xl`}>
-          {delay && <div>Delay: {delay} ms</div>}
+          {delay && <div className="flex items-center space-x-2"><span><IoMdTimer /></span> : {delay} ms
+          </div>}
           {hoursSlept && <div className="flex items-center space-x-2"><span><GiNightSleep /></span> : {hoursSlept} hours
+            </div>}
+          {bedPrediction && <div className="flex items-center space-x-2"><span><GiBrain /></span> : {bedPrediction} %
             </div>}
           {weather && <div className="flex items-center space-x-2"><span>Weather:</span> 
             {weather === 'rainy' ? <IoRainy /> :
