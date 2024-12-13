@@ -121,7 +121,7 @@ const InfoModal = ({
         {/* Grafana dashboard Input */}
         <iframe
           title="Grafana Dashboard Display"
-          src={`http://${grafanaAddress}/d-solo/iot-dashboard/iot-dashboards?orgId=1&timezone=browser&refresh=5s&panelId=1&__feature.dashboardSceneSolo`}
+          src={`http://${grafanaAddress}/d-solo/iot-dashboard/iot-dashboards?orgId=1&timezone=browser&refresh=5s&panelId=1&__feature.dashboardSceneSolo&from=now-30m&to=now`}
           className="w-full"
           height="200"
         ></iframe>
