@@ -319,6 +319,9 @@ def main():
 
                 # send sensor state to HTTP or MQTT broker
                 sensor_state = int(not pressure_mat.value())
+
+                # led blinks at each request made
+                led.duty(1023)
                 if use_http:
                     # use http for sensor data
                     publish_sensor_data(sensor_state=sensor_state,
@@ -328,18 +331,35 @@ def main():
                     # use mqtt for sensor data
                     publish_sensor_data(sensor_state=sensor_state,
                             ip=ip, mac=mac, client=client, c_type="mqtt")
-
+                led.duty(0)
 
                 # restart sampling rate timer
                 start_time = ticks_ms()
             sleep(tick_time)
             check_pressure_mat()
         except OSError as e:
-            if not use_http:
-                print(f"Error: {e}. Reconnecting...")
-                client = connect_mqtt(broker_ip=broker_ip)  # Reconnect to the MQTT broker
-            else:
-                print(f"Error processing request: {e}.")
+            print(f"OSError occurred: {e}")
+            # Fallback for connection issues
+            # Attempt to reconnect to Wi-Fi
+            try:
+                print("Reconnecting to Wi-Fi...")
+                ip, mac = connect_wifi(static_ip=None)
+                print("Wi-Fi reconnected successfully.")
+            except Exception as wifi_error:
+                print(f"Failed to reconnect to Wi-Fi: {wifi_error}")
+                continue
+
+            # Attempt to reconnect to MQTT broker
+            try:
+                print("Reconnecting to MQTT broker...")
+                client = connect_mqtt(broker_ip=broker_ip)
+                print("MQTT broker reconnected successfully.")
+            except Exception as mqtt_error:
+                print(f"Failed to reconnect to MQTT broker: {mqtt_error}")
+                continue
+
+            # restart sampling rate timer
+            start_time = ticks_ms()
 
 if __name__ == '__main__' :
     main()
