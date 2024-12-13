@@ -1,7 +1,10 @@
+.vscode
+**/.vscode
 tools/*.exe
 tools/*.bin
 esp32/dfplayermini.py
 esp32/secrets.py
+data_analysis/analysis_secrets.py
 esp32/esp_secrets.py
 telegram_bot/telegram_secrets.py
 docs/IOT2024-4.pdf

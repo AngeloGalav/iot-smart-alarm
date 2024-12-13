@@ -1,21 +1,19 @@
 services:
-  # iot-backend-server:
-  #   build:
-  #     context: ./backend
-  #   container_name: iot-backend-server
-  #   ports:
-  #     # - "1883:1883"
-  #     - "5000:5000"
-  #   depends_on:
-  #     - mqtt-broker
-  #   volumes:
-  #     - ./backend:/app
-  #   environment:
-  #     - MQTT_BROKER_HOST=mqtt-broker
-  #     - MQTT_BROKER_PORT=1883
-  #     - FLASK_APP_PORT=5000
-  #   dns:
-  #     - 127.0.0.1  # Use the host's DNS resolver
+  iot-analysis-server:
+    build:
+      context: ./data_analysis
+    container_name: iot-analysis-server
+    ports:
+      # - "1883:1883"
+      - "5001:5001"
+    depends_on:
+      - mqtt-broker
+    volumes:
+      - ./data_analysis:/app
+    environment:
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - FLASK_APP_PORT=5001
 
   iot-frontend-react:
     build:
@@ -28,6 +26,7 @@ services:
     environment:
       - REACT_APP_MQTT_BROKER_HOST=mqtt-broker
       - REACT_APP_MQTT_BROKER_PORT=1883
+      - REACT_APP_GRAFANA_ADDRESS=localhost:3001
 
   mqtt-broker:
     image: eclipse-mosquitto:latest
@@ -62,13 +61,14 @@ services:
       - "3001:3000"
     volumes:
       - ./grafana/data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning  # Provisioning files
-      - ./grafana/dashboards:/var/lib/grafana/dashboards  # Dashboards
+      - ./grafana/provisioning:/etc/grafana/provisioning  # provisioning files
+      - ./grafana/dashboards:/var/lib/grafana/dashboards  # dashboards
     depends_on:
       - influxdb
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_LOG_LEVEL=error
 
   telegram-bot:

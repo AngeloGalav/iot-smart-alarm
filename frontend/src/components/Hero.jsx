@@ -3,13 +3,14 @@ import Alarm from "./Alarm";
 import api from "../api";
 import "./Hero.css"
 import SettingsModal from "./SettingsModal";
+import InfoModal from "./InfoModal";
 import { FaGear } from "react-icons/fa6";
-
+import { BsClipboardDataFill } from "react-icons/bs";
 
 const Hero = () => {
   const [alarms, setAlarms] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const [isDataModalOpen, setDataIsModalOpen] = useState(false);
 
   // fetch alarms from the backend on mount
   useEffect(() => {
@@ -58,9 +59,12 @@ const Hero = () => {
       <div>
       <h1 className="text-3xl font-bold">Alarm Manager</h1>
       </div>
-      <div className="grid gap-4 grid-cols-3">
+      <div className="grid gap-4 grid-cols-4">
       <button className="btn btn-accent col-span-2" onClick={addAlarm}>
         Add Alarm
+      </button>
+      <button className="btn btn-secondary" onClick={() => setDataIsModalOpen(true)}>
+        <BsClipboardDataFill />
       </button>
       <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
         <FaGear />
@@ -72,6 +76,11 @@ const Hero = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onDeleteAllAlarms={() => alert("not implemented")}
+      />
+    
+    <InfoModal
+        isOpen={isDataModalOpen}
+        onClose={() => setDataIsModalOpen(false)}
       />
 
       <div className="p-6 bg-base-300 min-h-full mt-4 mb-4 rounded-2xl text-center space-y-6">

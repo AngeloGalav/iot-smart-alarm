@@ -10,7 +10,7 @@ from esp_secrets import WIFI_SSID, WIFI_PASSWORD
 import json
 
 # Hardware setup
-sensor_name = "sensorino_esp32"
+sensor_name = "esp32_alarm"
 pressure_mat = Pin(18, Pin.IN, Pin.PULL_DOWN)
 led = PWM(Pin(2), freq=1000)
 music = Player(pin_TX=17, pin_RX=16)
@@ -18,6 +18,9 @@ music = Player(pin_TX=17, pin_RX=16)
 # angry mode configs
 alarm_start_time = None  # To track when the alarm started
 angry_timeout = 30000    # Timeout for angry mode in milliseconds (30 seconds)
+SECOND = 1000 # a second in milliseconds
+
+tick_time = 1
 
 # chimes ids setup
 sound_angry_alarm = 2
@@ -44,6 +47,7 @@ music.stop()
 MQTT_TOPIC_COMMAND = "iot_alarm/command"
 MQTT_TOPIC_SENSOR = "iot_alarm/sensor_data"
 MQTT_TOPIC_WEATHER = "iot_alarm/weather"
+MQTT_TOPIC_DELAY = "iot_alarm/delay"
 
 is_playing = False
 is_angry_playing = False
@@ -60,6 +64,7 @@ sensor_readings = []
 use_http = True
 http_async = False
 angry_mode = False
+get_delay = True
 sampling_rate = 1
 alarm_volume = 20
 music.volume(alarm_volume)
@@ -80,7 +85,7 @@ def connect_wifi(static_ip=None, hostname='esp32_alarm'):
     # set hostname for dynamic connection
     wlan.config(dhcp_hostname = hostname)
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
-    
+
     print("Looking for WiFi...")
 
     # wait for wifi
@@ -206,34 +211,45 @@ def mqtt_callback(topic, msg):
 async def async_http_post(url, data):
     global sampling_rate
     try:
+        start = ticks_ms()
         response = urequests.post(url, json=data)
         response.close()  # close the connection immediately
+        end = ticks_ms()
         print("POST request sent successfully.")
+        if (get_delay) :
+            ...
     except Exception as e:
         print(f"Error sending async POST request: {e}")
 
 
-def publish_sensor_data(sensor_state, ip, mac, client=None, broker_ip=None):
+def publish_sensor_data(sensor_state, ip, mac, client, server_ip=None, c_type="http"):
     payload = {
         "sensor_name": sensor_name,
         "sensor_ip": ip,
         "sensor_mac": mac,
-        "state": sensor_state,
+        "state": sensor_state
     }
-    if client is not None :
+    if c_type != "http" :
+        # mqtt transmission
         client.publish(MQTT_TOPIC_SENSOR, json.dumps(payload))
         print(f"Published using MQTT: {payload}")
     else :
+        # http transmission
         try:
             if (http_async):
                 print(f"Publishing payload using async HTTP... Payload: {payload}")
-                asyncio.run(async_http_post(f"http://{broker_ip}:5000/recv_data", payload))
+                asyncio.run(async_http_post(f"http://{server_ip}:5000/recv_data", payload))
             else :
+                start = ticks_ms()
                 print(f"Publishing payload using HTTP... Payload: {payload}")
-                response = urequests.post(f"http://{broker_ip}:5000/recv_data", json=payload)
+                response = urequests.post(f"http://{server_ip}:5000/recv_data", json=payload)
                 response.close()
+                delay = ticks_diff(ticks_ms(), start)
+                if (get_delay) :
+                    client.publish(MQTT_TOPIC_DELAY, json.dumps({"delay": delay}))
         except Exception as e:
             print(f"HTTP error: {e}")
+
 
 # Start the alarm
 def start_alarm():
@@ -289,22 +305,28 @@ def main():
     client = connect_mqtt(broker_ip=broker_ip)
     sleep(2)
 
+    start_time = ticks_ms()
     while True:
         try:
-            client.check_msg()  # Check for incoming MQTT messages
+            if ticks_diff(ticks_ms(), start_time) >= sampling_rate*SECOND :
+                client.check_msg()  # Check for incoming MQTT messages
 
-            # send sensor state to HTTP or MQTT broker
-            sensor_state = not pressure_mat.value()
-            if use_http:
-                # use http for sensor data
-                publish_sensor_data(sensor_state=sensor_state, ip=ip, mac=mac, broker_ip=broker_ip)
-            else:
-                # use mqtt for sensor data
-                publish_sensor_data(sensor_state=sensor_state, ip=ip, mac=mac, client=client)
+                # send sensor state to HTTP or MQTT broker
+                sensor_state = int(not pressure_mat.value())
+                if use_http:
+                    # use http for sensor data
+                    publish_sensor_data(sensor_state=sensor_state,
+                            ip=ip, mac=mac, client=client, server_ip=broker_ip,
+                            c_type="http")
+                else:
+                    # use mqtt for sensor data
+                    publish_sensor_data(sensor_state=sensor_state,
+                            ip=ip, mac=mac, client=client, c_type="mqtt")
 
-            check_pressure_mat()
-            print("TICK!")
-            sleep(sampling_rate)
+                check_pressure_mat()
+
+                # restart sampling rate timer
+                start_time = ticks_ms()
         except OSError as e:
             if not use_http:
                 print(f"Error: {e}. Reconnecting...")

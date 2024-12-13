@@ -1,4 +1,4 @@
-# iot-smart-alarm
+# alarm-thingy
 
 <p align="center">
   <img src="res//image.png" alt="Robot Alarm" width="400px"/>
@@ -24,24 +24,28 @@ docker-compose up --build
 ## Setup
 - InfluxDB
 - Grafana
+- Secrets
+
+## Accuracy script
+To run the accuracy script, make sure that the InfluxDB instance is up and running. Then, simply use the script in this way:
+```
+python accuracy_script.py [hours slept]
+```
+E.g. `python accuracy_script.py 8.0`
+
 
 ## Tasks
 - IMPORTANT!!!
  - [x] moving average/find alarm go substitute
- - [ ] TEST GRAFANA!!!!!!!!!
- - [ ] fix new sampling rate handling
-
-- [ ] ESP32 alarm
-  - [x] complete hardware
-  - [x] write code that sends data to data proxy via CoAP or HTTP, while supporting MQTT. The MQTT commands are:
-    - [x] sampling_rate: interval between sensor readings
-    - [x] trigger_alarm (triggers alarm until user gets up)
-    - [x] stop_alarm
-  - [x] write alarm code
-  - [x] write AI alarm prediction code?
-  - [x] implement angry mode
-  - [x] add repeat sound
-  - [x] add second sound for mqtt connection
+ - [x] TEST GRAFANA!!!!!!!!!
+ - [x] fix new sampling rate handling
+ - [x] running average on mqtt
+ - [ ] sleep time, accuracy etc..
+ - [ ] report
+ - [ ] finish tests
+ - [ ] running average in influxdb/grafana (check analysis module)
+ - [ ] fix sleep time
+ - [ ] add location
 
 - [ ] data analysis
   - based on the sensor data collected, can determine the number of hours the user slept each day
@@ -49,41 +53,24 @@ docker-compose up --build
   1. Mean Latency of the data acquisition process (network latency to send data to the proxy).
   2. Accuracy to detect if a person is in bed or not
 
-- [ ] Data proxy
-  - [x] write server code, which receives data from the esp32 and sends it to influxdb
-  - [x] integrate it with the webapp
-  - [x] weather api integration
-  - [x] add alarm code
-  - [x] test start/stop alarm
-
-- [x] influxdb
-  - [x] setup influxdb instance to collect data
-
-- [ ] grafana
-  - [ ] develop a dashboard
-
-
-- [ ] Frontend
-  - [ ] volume slider
-
 - [ ] Readme
   - [ ] make proper readme file
 
 - [x] Telegram Bot
   - [x] Do bot
 
-
 - TESTS:
   - [ ] test alarm logic (two alarms close to each other)
   - [x] test weather time
-  - [ ] test grafana
+  - [x] test grafana
   - [x] test stop alarm
   - [x] test angry mode
   - [ ] test http response time
+  - [ ] test volume slider
+  - [ ] test analysis script
+  - [ ] test analysis server
+  - [ ] retest esp32 functions (INCLUDING SWITCHING TO HTTP/MQTT)
 
-- File transf
-  - [x] add ringtones for differnet weathers
-  - [x] increase ringtones length
 
 ### Resources
 dfplayermini library here: https://github.com/lavron/micropython-dfplayermini

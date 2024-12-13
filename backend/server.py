@@ -97,7 +97,7 @@ def handle_mqtt_message(client, userdata, message):
             value = int(state)
             point = point.field("bed_state", value)
             write_api.write(bucket=INFLUXDB_BUCKET, record=point)
-            logging.info("Sensor data written to InfluxDB.")
+            logging.info(f"Sensor data written to InfluxDB: {sensor_name}, {sensor_ip}, {state}")
         except Exception as e:
             logging.error(f"Error writing to InfluxDB: {e}")
 
@@ -133,14 +133,13 @@ def recv_data():
         if sensor_name is None or sensor_ip is None or sensor_mac is None or state is None:
             return jsonify({"status": "error", "message": "Missing required fields"}), 400
 
-        # write data to InfluxDB
         try:
             # store sensor data in InfluxDB
             point = Point("sensor_data").tag("device", sensor_name)
             value = int(state)
             point = point.field("bed_state", value)
             write_api.write(bucket=INFLUXDB_BUCKET, record=point)
-            logging.info("Sensor data written to InfluxDB.")
+            logging.info(f"Sensor data written to InfluxDB: {sensor_name}, {sensor_ip}, {state}")
         except Exception as e:
             logging.error(f"Error writing to InfluxDB: {e}")
 
@@ -159,9 +158,10 @@ def add_alarm():
     if not data:
         return jsonify({"error": "Invalid input"}), 400
 
-    latest_alarm_id += 1
+    max_id = max(alarm['id'] for alarm in alarms)
+
     alarm = {
-        "id": latest_alarm_id,  # Simple ID generator
+        "id": max_id+1,  # Simple ID generator
         "time": data.get("time"),
         "weekdays": data.get("weekdays", []),
         "active": True
@@ -180,6 +180,16 @@ def get_alarms():
     Returns all alarms.
     '''
     return jsonify(alarms), 200
+
+@app.route('/weather', methods=['GET'])
+def get_weather():
+    '''
+    Get current weather.
+    '''
+    weather_data = get_weather_data()
+    if weather_data:
+        return json.dumps({"weather": weather_data}), 200
+    return jsonify({"error": "Weather server unavailable"}), 503
 
 @app.route('/alarms/<int:alarm_id>', methods=['PUT'])
 def modify_alarm(alarm_id):
@@ -332,7 +342,6 @@ def alarm_clock():
         time.sleep(10)  # check every 10 seconds, to make it less expensive
 
 
-
 if __name__ == '__main__':
     # Notify ESP32 about broker IP in a separate thread
     alarms = load_alarms_from_file(alarm_filename)
@@ -340,10 +349,6 @@ if __name__ == '__main__':
 
     # Start MQTT app
     mqtt.init_app(app)
-
-    # weather_data = get_weather_data()
-    # if weather_data:
-    #     print(f"Weather data: {weather_data}")
 
     # set the alarm clock thread
     alarm_thread = threading.Thread(target=alarm_clock, daemon=True)

@@ -2,6 +2,7 @@
 import axios from "axios";
 
 const API_HOSTNAME = "http://localhost:5000";
+const DATA_ANALYSIS_HOSTNAME = "http://localhost:5001";
 
 const api = {
   getAlarm: async (id) => {
@@ -51,6 +52,21 @@ const api = {
 
   startAlarm: async () => {
     const response = await axios.post(`${API_HOSTNAME}/start_alarm`);
+    return response.data;
+  },
+
+  getWeather: async () => {
+    const response = await axios.get(`${API_HOSTNAME}/weather`);
+    return response.data;
+  },
+
+  getSleepData: async () => {
+    const response = await axios.get(`${DATA_ANALYSIS_HOSTNAME}/sleep_time`);
+    return response.data;
+  },
+
+  getDelay: async () => {
+    const response = await axios.get(`${DATA_ANALYSIS_HOSTNAME}/delay`);
     return response.data;
   },
 
