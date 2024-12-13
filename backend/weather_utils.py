@@ -1,6 +1,7 @@
 import requests
 
-def get_weather_data(latitude=43.6158, longitude=13.5189):
+def get_weather_data(location):
+    latitude, longitude = location
     parameters = {
         'latitude': latitude,
         'longitude': longitude,

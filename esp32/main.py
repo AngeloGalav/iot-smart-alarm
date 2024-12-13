@@ -12,7 +12,7 @@ import json
 # Hardware setup
 sensor_name = "esp32_alarm"
 pressure_mat = Pin(18, Pin.IN, Pin.PULL_DOWN)
-led = PWM(Pin(2), freq=1000)
+led = PWM(Pin(23), freq=1000)
 music = Player(pin_TX=17, pin_RX=16)
 
 # angry mode configs

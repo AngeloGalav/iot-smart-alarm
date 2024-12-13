@@ -70,6 +70,11 @@ const api = {
     return response.data;
   },
 
+  updateLocation: async (weather_location) => {
+    const response = await axios.post(`${API_HOSTNAME}/weather`, weather_location);
+    return response.data;
+  },
+
 };
 
 export default api;

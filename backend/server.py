@@ -30,6 +30,7 @@ except Exception as e:
         "Have you started the MQTT Broker?")
     exit()
 
+weather_location = (43.6158, 13.5189)
 
 CORS(app) # enable CORS for all routes
 
@@ -186,10 +187,38 @@ def get_weather():
     '''
     Get current weather.
     '''
-    weather_data = get_weather_data()
+    weather_data = get_weather_data(weather_location)
     if weather_data:
         return json.dumps({"weather": weather_data}), 200
     return jsonify({"error": "Weather server unavailable"}), 503
+
+@app.route('/weather', methods=['POST'])
+def update_weather_location():
+    """
+    Updates the weather location based on latitude and longitude.
+    """
+    global weather_location
+    try:
+        print("printing rq", request.data)
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "No data provided"}), 400
+
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+
+        # validate input
+        if latitude is None or longitude is None:
+            return jsonify({"status": "error", "message": "Missing latitude or longitude"}), 400
+
+        logging.info(f"Updated weather location to Latitude: {latitude}, Longitude: {longitude}")
+
+        weather_location = (latitude, longitude)
+        return jsonify({"status": "success", "message": "Weather location updated successfully"}), 200
+
+    except Exception as e:
+        logging.error(f"Error updating weather location: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/alarms/<int:alarm_id>', methods=['PUT'])
 def modify_alarm(alarm_id):
@@ -222,7 +251,7 @@ def remove_alarm(alarm_id):
     save_alarms_to_file(alarm_filename, alarms)  # Save to file after deletion
     return jsonify({"message": "Alarm deleted successfully"}), 200
 
-# PATCH modifies the instance, while directly creates a new one
+# PATCH modifies the instance
 @app.route('/alarms/<int:alarm_id>/toggle', methods=['PATCH'])
 def toggle_alarm(alarm_id):
     '''
@@ -332,7 +361,7 @@ def alarm_clock():
                     if not alarm_triggered:
                         saved_time = current_time
                         # attempt to get weather data
-                        weather_data = get_weather_data()
+                        weather_data = get_weather_data(weather_location)
                         if weather_data:
                             mqtt.publish(MQTT_TOPIC_WEATHER, json.dumps({"weather": weather_data}))
 
