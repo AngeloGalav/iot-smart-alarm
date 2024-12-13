@@ -36,16 +36,11 @@ E.g. `python accuracy_script.py 8.0`
 
 ## Tasks
 - IMPORTANT!!!
- - [x] moving average/find alarm go substitute
- - [x] TEST GRAFANA!!!!!!!!!
- - [x] fix new sampling rate handling
  - [x] running average on mqtt
  - [ ] sleep time, accuracy etc..
  - [ ] report
  - [ ] finish tests
- - [ ] running average in influxdb/grafana (check analysis module)
  - [ ] fix sleep time
- - [ ] add location
 
 - [ ] data analysis
   - based on the sensor data collected, can determine the number of hours the user slept each day
@@ -61,14 +56,9 @@ E.g. `python accuracy_script.py 8.0`
 
 - TESTS:
   - [ ] test alarm logic (two alarms close to each other)
-  - [x] test weather time
-  - [x] test grafana
-  - [x] test stop alarm
-  - [x] test angry mode
-  - [ ] test http response time
+  - [x] test http response time
   - [ ] test volume slider
-  - [ ] test analysis script
-  - [ ] test analysis server
+  - [ ] test analysis script/SLEEP TIME
   - [ ] retest esp32 functions (INCLUDING SWITCHING TO HTTP/MQTT)
 
 

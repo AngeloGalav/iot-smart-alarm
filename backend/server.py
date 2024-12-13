@@ -30,7 +30,7 @@ except Exception as e:
         "Have you started the MQTT Broker?")
     exit()
 
-weather_location = (43.6158, 13.5189)
+weather_location = (44.49381, 11.33875)
 
 CORS(app) # enable CORS for all routes
 
@@ -89,16 +89,17 @@ def handle_mqtt_message(client, userdata, message):
             sensor_name = payload.get('sensor_name')
             sensor_ip = payload.get('sensor_ip')
             state = payload.get('state')
+            state_avg = payload.get('state_avg')
 
-            if sensor_name is None or sensor_ip is None or state is None:
+            if sensor_name is None or sensor_ip is None or state is None or state_avg is None:
                 logging.error("Sensor data missing required fields.")
 
             # store sensor data in InfluxDB
             point = Point("sensor_data").tag("device", sensor_name)
-            value = int(state)
-            point = point.field("bed_state", value)
+            point = point.field("bed_state", int(state))
+            point = point.field("bed_avg", float(state_avg))
             write_api.write(bucket=INFLUXDB_BUCKET, record=point)
-            logging.info(f"Sensor data written to InfluxDB: {sensor_name}, {sensor_ip}, {state}")
+            logging.info(f"Sensor data written to InfluxDB: {sensor_name}, {state}, {state_avg}")
         except Exception as e:
             logging.error(f"Error writing to InfluxDB: {e}")
 
@@ -128,19 +129,19 @@ def recv_data():
         # Extract the required fields
         sensor_name = data.get('sensor_name')
         sensor_ip = data.get('sensor_ip')
-        sensor_mac = data.get('sensor_mac')
         state = data.get('state')
+        state_avg = data.get('state_avg')
 
-        if sensor_name is None or sensor_ip is None or sensor_mac is None or state is None:
+        if sensor_name is None or sensor_ip is None or state is None or state_avg is None:
             return jsonify({"status": "error", "message": "Missing required fields"}), 400
 
         try:
             # store sensor data in InfluxDB
             point = Point("sensor_data").tag("device", sensor_name)
-            value = int(state)
-            point = point.field("bed_state", value)
+            point = point.field("bed_state", int(state))
+            point = point.field("bed_avg", float(state_avg))
             write_api.write(bucket=INFLUXDB_BUCKET, record=point)
-            logging.info(f"Sensor data written to InfluxDB: {sensor_name}, {sensor_ip}, {state}")
+            logging.info(f"Sensor data written to InfluxDB: {sensor_name}, {state}, {state_avg}")
         except Exception as e:
             logging.error(f"Error writing to InfluxDB: {e}")
 
@@ -282,7 +283,7 @@ def stop_alarm():
 @app.route('/send_settings', methods=['POST'])
 def send_settings():
     '''
-    Stops alarm running on the esp32.
+    Sends settings to the ESP32.
     '''
     logging.info(f"Switched alarm data transmission protocol.")
     try:
@@ -292,7 +293,17 @@ def send_settings():
         angry_mode = data.get('angry_mode')
         sampling_rate = data.get('sampling_rate')
         w_size = data.get('w_size')
+        tick = data.get('tick')
         vol = data.get('vol')
+
+        vol = int(vol)
+        tick = float(tick)
+        w_size = int(w_size)
+
+        # set tickrate and vol to default value
+        if tick > 2 or tick < 0.1 : tick = 1
+        if vol > 50 or vol < 0 : vol = 20
+        if w_size > 50 or w_size < 1 : w_size = 10
 
         if (use_mqtt is None or use_async_http is None or angry_mode is None
                 or w_size is None or sampling_rate is None or vol is None):
@@ -304,7 +315,8 @@ def send_settings():
             'angry_mode' : angry_mode,
             'samplingRate' : sampling_rate,
             'w_size': int(w_size),
-            'vol' : int(vol)
+            'vol' : vol,
+            'tick' : tick
         }
         mqtt.publish(MQTT_TOPIC_COMMAND, json.dumps(settings))
         logging.info(f"Published settings: {settings} to topic {MQTT_TOPIC_COMMAND}")
@@ -318,7 +330,7 @@ def send_settings():
 @app.route('/sampling_rate', methods=['POST'])
 def sampling_rate():
     '''
-    Receives a sample rate from the POST request, validates it, and sends it to the ESP32 via MQTT.
+    Receives sampling rate from a POST request, validates it, and sends it to the ESP32 via MQTT.
     '''
     try:
         data = request.get_json()

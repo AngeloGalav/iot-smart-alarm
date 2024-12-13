@@ -20,7 +20,7 @@ alarm_start_time = None  # To track when the alarm started
 angry_timeout = 30000    # Timeout for angry mode in milliseconds (30 seconds)
 SECOND = 1000 # a second in milliseconds
 
-tick_time = 1
+tick_time = 0.5 # sensor reading time
 
 # chimes ids setup
 sound_angry_alarm = 2
@@ -58,6 +58,7 @@ alarm_ringing = False
 # running average
 w_size = 10           # running avg window size
 start_thresh = 0.7    # trigger alarm if average exceeds this
+running_average = 0.0
 sensor_readings = []
 
 # settings
@@ -146,7 +147,7 @@ def connect_mqtt(broker_ip):
 
 # handle incoming MQTT messages
 def mqtt_callback(topic, msg):
-    global use_http, http_async, angry_mode, sampling_rate, alarm_go, w_size, current_alarm_song
+    global use_http, http_async, angry_mode, sampling_rate, alarm_go, w_size, current_alarm_song, tick_time
 
     msg = msg.decode("utf-8")
     topic = topic.decode('utf-8')
@@ -195,6 +196,10 @@ def mqtt_callback(topic, msg):
                     music.volume(alarm_volume)
                     print(f"Volume set to {alarm_volume}")
 
+                if 'tick' in data:
+                    tick_time = float(data['tick'])
+                    print(f"Tickrate set to {tick_time}")
+
             except Exception as e:
                 print(f"Error processing MQTT message: {e}")
     elif topic == MQTT_TOPIC_WEATHER:
@@ -227,7 +232,8 @@ def publish_sensor_data(sensor_state, ip, mac, client, server_ip=None, c_type="h
         "sensor_name": sensor_name,
         "sensor_ip": ip,
         "sensor_mac": mac,
-        "state": sensor_state
+        "state": sensor_state,
+        "state_avg" : running_average
     }
     if c_type != "http" :
         # mqtt transmission
@@ -276,7 +282,7 @@ def stop_alarm():
         led.duty(0)
 
 def check_pressure_mat():
-    global is_playing, sensor_readings, alarm_go
+    global is_playing, sensor_readings, alarm_go, running_average
     # update the sliding window
     if len(sensor_readings) >= w_size:
         sensor_readings.pop(0)  # Remove the oldest reading
@@ -323,10 +329,11 @@ def main():
                     publish_sensor_data(sensor_state=sensor_state,
                             ip=ip, mac=mac, client=client, c_type="mqtt")
 
-                check_pressure_mat()
 
                 # restart sampling rate timer
                 start_time = ticks_ms()
+            sleep(tick_time)
+            check_pressure_mat()
         except OSError as e:
             if not use_http:
                 print(f"Error: {e}. Reconnecting...")

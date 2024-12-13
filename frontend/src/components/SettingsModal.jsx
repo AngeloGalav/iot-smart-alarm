@@ -15,7 +15,7 @@ const SettingsModal = ({
   const [samplingRateError, setSamplingRateError] = useState("");
   const [wSizeError, setWSizeError] = useState("");
   const [volume, setVolume] = useState(20);
-
+  const [tickTime, setTickTime] = useState(0.5);
 
   // Stop the active alarm
   const stopActiveAlarm = async () => {
@@ -71,7 +71,8 @@ const SettingsModal = ({
       angry_mode: angryMode,
       sampling_rate: samplingRate,
       w_size : windowSize,
-      vol : volume
+      vol : volume,
+      tick : tickTime
     };
 
     try {
@@ -111,7 +112,7 @@ const SettingsModal = ({
         } bg-gray-800 text-gray-200 rounded-lg shadow-lg w-full max-w-lg p-6`}
       >
         <h2 className="text-2xl font-bold mb-4">Settings</h2>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {/* Angry Mode Toggle */}
           <div className="form-control">
             <label className="label cursor-pointer justify-between">
@@ -170,6 +171,27 @@ const SettingsModal = ({
             )}
           </div>
 
+                  {/* Tick Time */}
+        <div className="form-control col-span-2 md:col-span-1">
+          <label className="label">
+            <span className="label-text text-gray-200">Tick Time</span>
+          </label>
+          <input
+            type="range"
+            min="0.1"
+            max="2"
+            step="0.1"
+            value={tickTime}
+            onChange={(e) => setTickTime(e.target.value)}
+            className="range range-primary bg-gray-700"
+          />
+          <div className="flex justify-between text-sm text-gray-400 mt-1">
+            <span>0.1</span>
+            <span>{tickTime}</span>
+            <span>2</span>
+          </div>
+          </div>
+
           {/* Moving Avg Window Size */}
           <div className="form-control">
             <label className="label">
@@ -207,9 +229,10 @@ const SettingsModal = ({
             <div className="text-center text-gray-200">{volume}</div>
           </div>
 
-
+          </div>
+          <div className="space-y-2">
           {/* Stop Current Active Alarm */}
-          <div className="form-control mt-4">
+          <div className="form-control mt-6">
             <button
               className="btn btn-warning w-full"
               onClick={stopActiveAlarm}
