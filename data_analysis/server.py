@@ -9,10 +9,10 @@ from analysis_secrets import influxdb_api_token
 from sleep_accuracy import get_total_sleep_time
 import pickle
 import pandas as pd
+import csv
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
-
 # flask config
 app = Flask(__name__)
 FLASK_APP_PORT = int(os.getenv("FLASK_APP_PORT", 5000))
@@ -36,6 +36,9 @@ CORS(app) # enable CORS for all routes
 # Comulative Average setup
 cumulative_average = 0
 num_delays = 0
+
+# file in which the delay data is to be stored
+delay_filename = "delay_data.csv"
 
 # InfluxDB configuration
 INFLUXDB_HOST = os.getenv("INFLUXDB_HOST", "localhost")
@@ -71,6 +74,24 @@ def load_prophet_model():
     except Exception as e:
         logging.error(f"Error loading Prophet model: {e}")
 
+def initialize_csv(file_path):
+    """Initialize the CSV file. Create if it doesn't exist, otherwise open in append mode."""
+    file_exists = os.path.exists(file_path)
+    if not file_exists:
+        with open(file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["time", "delay", "cum_avg"])
+    return file_exists
+
+
+def log_delay_to_csv(file_path, delay, cumulative_average):
+    """Log the delay and cumulative average to the CSV file."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(file_path, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([timestamp, delay, cumulative_average])
+
+
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
     global cumulative_average, num_delays
@@ -87,6 +108,9 @@ def handle_mqtt_message(client, userdata, message):
                     num_delays += 1
                     cumulative_average = ((cumulative_average * (num_delays - 1)) + delay) / num_delays
                     logging.info(f"Received delay: {delay} ms, Updated CA: {cumulative_average:.2f} ms")
+
+                    # save delay info to data
+                    log_delay_to_csv(delay_filename, delay, cumulative_average)
                 else:
                     logging.error(f"Invalid delay value received: {payload}")
             except Exception as e:
@@ -144,6 +168,8 @@ def sleep_time():
         return "Could not compute sleep data", 500
 
 if __name__ == '__main__':
+    initialize_csv(delay_filename)
+
     # setup prediction system
     load_prophet_model()
 
