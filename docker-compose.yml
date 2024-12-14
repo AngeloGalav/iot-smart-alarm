@@ -57,7 +57,7 @@ services:
       - INFLUXD_LOG_LEVEL=info
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.2.2
     container_name: grafana
     ports:
       - "3001:3000"

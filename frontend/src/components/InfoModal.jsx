@@ -139,11 +139,10 @@ const InfoModal = ({
         {/* Grafana dashboard Input */}
         <iframe
           title="Grafana Dashboard Display"
-          src={`http://${grafanaAddress}/d-solo/iot-dashboard/iot-dashboards?orgId=1&timezone=browser&refresh=5s&panelId=1&__feature.dashboardSceneSolo&from=now-30m&to=now`}
+          src={`http://${grafanaAddress}/d-solo/iot-dashboard/iot-dashboards?orgId=1&refresh=5s&from=now-30m&to=now&panelId=1`}
           className="w-full"
           height="200"
         ></iframe>
-
 
         {/* Weather Location Input */}
         <div className="my-6 flex items-center space-x-4">
