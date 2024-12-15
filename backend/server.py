@@ -8,6 +8,7 @@ from flask_cors import CORS
 import logging
 from influxdb_client import InfluxDBClient, Point, WriteOptions
 from flask_mqtt import Mqtt
+from datetime import datetime
 from backend_secrets import influxdb_api_token
 from weather_utils import get_weather_data
 import mqtt_utils
@@ -75,7 +76,7 @@ def handle_mqtt_message(client, userdata, message):
     topic = message.topic
     try:
         payload = json.loads(message.payload.decode())
-        logging.info(f"MQTT received from broker")
+        logging.info(f"MQTT received from broker - {datetime.now()}")
 
         # if I receive a message from esp32
         # it's already connected, stop send_broker_ip thread
