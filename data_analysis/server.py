@@ -68,7 +68,7 @@ total_sleep_time_sum = 0
 
 
 days_count = 0
-current_day = datetime.now().date() - timedelta(days=1)
+current_day = datetime.now().date()
 
 # Prophet configuration
 MODEL_PATH = "bed_predictions_fake.pkl"

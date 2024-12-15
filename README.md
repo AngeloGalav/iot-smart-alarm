@@ -54,7 +54,8 @@ To enable the AI features, you'll need to run the `train_fake_model.py` script f
 ```
 python train_fake_model.py
 ```
-This will output the model weights trained on a "fake" dataset in which the user's habits consists on sleeping from 9PM to 5AM.
+This will output the model weights trained on a synthetic dataset in which the user's habits consists on sleeping from 9PM to 5AM.
+You can also train a model on real data using the `train_data_from_influxdb.py` script to extract the data from InfluxDB and then use the `train_model.py` script to train the model on the InfluxDB data.
 
 ### Hardware
 #### Circuit schematics

@@ -13,7 +13,7 @@ def get_total_sleep_time(client, bucket, org, time):
     """Retrieve total sleep time data from InfluxDB."""
     query_api = client.query_api()
 
-    # Query raw bed_state data over the last day
+    # query raw bed_state data over the last day
     query = f'''
     from(bucket: "{bucket}")
         |> range(start: -{time})
@@ -45,7 +45,7 @@ def get_total_sleep_time(client, bucket, org, time):
                 start_time = datetime.fromisoformat(timestamps[i - 1])
                 end_time = datetime.fromisoformat(timestamps[i])
                 total_sleep_time += (end_time - start_time).total_seconds()
-        # Convert total sleep time to hours
+        # convert total sleep time to hours
         return total_sleep_time / 3600
 
     except Exception as e:
@@ -62,7 +62,6 @@ def save_accuracy_to_csv(ground_truth, sensor_total_sleep, accuracy):
         writer.writerow(['Sleep Sensor', ground_truth, sensor_total_sleep, accuracy])
 
 def main():
-    # Argument parsing
     parser = argparse.ArgumentParser(description="Calculate the accuracy of the sleep sensor data.")
     parser.add_argument('ground_truth', type=float, help="Ground truth sleep time in hours, e.g., 8.0")
     parser.add_argument('time', nargs='?', type=str, default="5h", help="Measured sleep time in hours, e.g., '8h' (default: '5h')")
