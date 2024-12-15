@@ -21,7 +21,7 @@ Here are some of the features of this project:
 - Switch to HTTP or MQTT on the fly for sending sensor data.
 - And much, much more...
 
-More information can be found in `docs/report.pdf` file.
+More information can be found in the `docs/report.pdf` file.
 
 ----
 ## Setup instructions
