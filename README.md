@@ -90,5 +90,17 @@ python sleep_accuracy.py [hours slept]
 E.g. `python sleep_accuracy.py 8.0`
 
 ---
+## Screenshots
+<p align="center">
+  <img src="res//ui.png" alt="The" width="900px"/>
+</p>
+<p align="center">
+  <img src="res//info_ui.png" alt="Robot Alarm" width="900px"/>
+</p>
+<p align="center">
+  <img src="res//settings_ui.png" alt="Robot Alarm" width="900px"/>
+</p>
+
+---
 ### Resources
 This DFPlayer Mini MicroPython library was used from here: https://github.com/lavron/micropython-dfplayermini. It was very handy for this project.
