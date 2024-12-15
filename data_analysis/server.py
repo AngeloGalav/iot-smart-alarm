@@ -15,7 +15,7 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 # flask config
 app = Flask(__name__)
-FLASK_APP_PORT = int(os.getenv("FLASK_APP_PORT", 5000))
+FLASK_APP_PORT = int(os.getenv("FLASK_APP_PORT", 5001))
 
 # MQTT configuration
 app.config['MQTT_BROKER_URL'] = os.getenv('MQTT_BROKER_HOST', 'localhost')
@@ -62,7 +62,7 @@ influx_client = InfluxDBClient(
 write_api = influx_client.write_api(write_options=WriteOptions(batch_size=1))
 
 # Prophet configuration
-MODEL_PATH = "bed_predictions.pkl"
+MODEL_PATH = "bed_predictions_fake.pkl"
 prophet_model = None
 
 def load_prophet_model():
@@ -149,11 +149,15 @@ def bed_state_pred():
 
         # forecasting
         forecast = prophet_model.predict(future_df)
+        forecast['yhat'] = forecast['yhat'].clip(lower=0, upper=1)
+        # clip so it does not show values higher than 1 or lower than 0
+        forecast['yhat_lower'] = forecast['yhat_lower'].clip(lower=0, upper=1)
+        forecast['yhat_upper'] = forecast['yhat_upper'].clip(lower=0, upper=1)
         likelihood = forecast['yhat'].iloc[0]
 
         return jsonify({
             "current_time": current_time_formatted,  # return full datetime
-            "likelihood": round(likelihood, 2)  # rounded to 2 decimals
+            "likelihood": round(likelihood*100, 2)  # rounded to 2 decimals
         }), 200
     except Exception as e:
         logging.error(f"Error predicting bed state likelihood: {e}")
@@ -162,9 +166,10 @@ def bed_state_pred():
 @app.route('/sleep_time', methods=['GET'])
 def sleep_time():
     try:
-        sleep_time = get_total_sleep_time(client=influx_client, org=INFLUXDB_ORG, bucket=INFLUXDB_BUCKET)
+        sleep_time = get_total_sleep_time(client=influx_client, org=INFLUXDB_ORG, bucket=INFLUXDB_BUCKET, time='24h')
         return jsonify({"sleep": sleep_time}), 200
-    except:
+    except Exception as e:
+        logging.error(f"Error computing sleep data: {e}")
         return "Could not compute sleep data", 500
 
 if __name__ == '__main__':

@@ -9,14 +9,14 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-def get_total_sleep_time(client, bucket, org):
+def get_total_sleep_time(client, bucket, org, time):
     """Retrieve total sleep time data from InfluxDB."""
     query_api = client.query_api()
 
     # Query raw bed_state data over the last day
     query = f'''
     from(bucket: "{bucket}")
-        |> range(start: -1d)
+        |> range(start: -{time})
         |> filter(fn: (r) => r._measurement == "sensor_data")
         |> filter(fn: (r) => r._field == "bed_state")
         |> sort(columns: ["_time"])
@@ -53,10 +53,6 @@ def get_total_sleep_time(client, bucket, org):
         return None
 
 def save_accuracy_to_csv(ground_truth, sensor_total_sleep, accuracy):
-    """
-    Save computed accuracy to a CSV file. In this case, if the file is present, the accuracy is appended.
-    Otherwise, the accuracy is written in the new file.
-    """
     file_exists = os.path.exists('sensor_accuracy.csv')
 
     with open('sensor_accuracy.csv', 'a' if file_exists else 'w', newline='') as file:
@@ -69,6 +65,7 @@ def main():
     # Argument parsing
     parser = argparse.ArgumentParser(description="Calculate the accuracy of the sleep sensor data.")
     parser.add_argument('ground_truth', type=float, help="Ground truth sleep time in hours, e.g., 8.0")
+    parser.add_argument('time', nargs='?', type=str, default="5h", help="Measured sleep time in hours, e.g., '8h' (default: '5h')")
     args = parser.parse_args()
 
     # influxdb hostname and port
@@ -81,7 +78,7 @@ def main():
 
     client = InfluxDBClient(url=f"http://{host}:{port}", token=influxdb_api_token, org=org)
 
-    sensor_total_sleep = get_total_sleep_time(client, bucket, org)
+    sensor_total_sleep = get_total_sleep_time(client, bucket, org, time=args.time)
 
     if sensor_total_sleep is not None:
         accuracy = 100 - (np.abs(sensor_total_sleep - args.ground_truth) / args.ground_truth * 100)
