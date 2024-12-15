@@ -56,9 +56,6 @@ alarm_triggered = False
 alarm_filename = "alarms.json"
 alarms = []
 
-# TODO:deleteme
-max_id = 0
-
 # connect to InfluxDB
 influx_client = InfluxDBClient(
     url=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
@@ -157,7 +154,7 @@ def recv_data():
 
 @app.route('/alarms', methods=['POST'])
 def add_alarm():
-    global alarms, max_id
+    global alarms
     data = request.json
     if not data:
         return jsonify({"error": "Invalid input"}), 400

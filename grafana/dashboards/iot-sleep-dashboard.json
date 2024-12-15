@@ -1,0 +1,27 @@
+{
+  "id": null,
+  "uid": "sleep-dashboard",
+  "title": "Sleep Dashboard",
+  "tags": [],
+  "timezone": "browser",
+  "schemaVersion": 27,
+  "version": 0,
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "barchart",
+      "title": "Daily Average Sleep Time (Cumulative Average)",
+      "targets": [
+        {
+          "query": "from(bucket: \"iot-bucket\") |> range(start: -30d) |> filter(fn: (r) => r._measurement == \"daily_sleep_average\" and r._field == \"average_sleep\")"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 10
+      }
+    }
+  ]
+}
