@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from "../api";
 
 const Alarm = ({ id, time, days, active, onDelete}) => {
-  const [isAlarmOn, setIsAlarmOn] = useState(false);
+  const [isAlarmOn, setIsAlarmOn] = useState(true);
   const [alarmTime, setAlarmTime] = useState("08:00");
   const [selectedDays, setSelectedDays] = useState(new Set());
   const weekdays = [
@@ -59,7 +59,6 @@ const Alarm = ({ id, time, days, active, onDelete}) => {
     if (!id) return;
     const fetchAlarmData = async () => {
       try {
-        console.log(time, days, active)
         setAlarmTime(time);
         setSelectedDays(new Set(days.map((day) => weekdays.find((w) => w.id === day)?.id)));
         setIsAlarmOn(active);

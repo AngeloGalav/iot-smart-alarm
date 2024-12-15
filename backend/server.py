@@ -54,7 +54,9 @@ MQTT_TOPIC_WEATHER = "iot_alarm/weather"
 alarm_triggered = False
 alarm_filename = "alarms.json"
 alarms = []
-latest_alarm_id = 0
+
+# TODO:deleteme
+max_id = 0
 
 # connect to InfluxDB
 influx_client = InfluxDBClient(
@@ -154,20 +156,23 @@ def recv_data():
 
 @app.route('/alarms', methods=['POST'])
 def add_alarm():
-    global alarms
-    global latest_alarm_id
+    global alarms, max_id
     data = request.json
     if not data:
         return jsonify({"error": "Invalid input"}), 400
 
-    max_id = max(alarm['id'] for alarm in alarms)
+    if alarms:
+        max_id = max(alarm['id'] for alarm in alarms) + 1
+    else:
+        max_id = 1
 
     alarm = {
-        "id": max_id+1,  # Simple ID generator
+        "id": max_id,
         "time": data.get("time"),
         "weekdays": data.get("weekdays", []),
         "active": True
     }
+    print(alarm)
 
     if alarm.get("time") is None or alarm.get("time") == []:
         return jsonify({"status": "error", "message": "Missing required fields"}), 400
@@ -386,7 +391,6 @@ def alarm_clock():
 if __name__ == '__main__':
     # Notify ESP32 about broker IP in a separate thread
     alarms = load_alarms_from_file(alarm_filename)
-    latest_alarm_id = len(alarms)
 
     # Start MQTT app
     mqtt.init_app(app)

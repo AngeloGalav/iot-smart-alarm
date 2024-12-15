@@ -37,6 +37,7 @@ const Hero = () => {
       };
 
       const data = await api.createAlarm(newAlarm);
+      console.log(alarms, data.alarm)
       setAlarms([...alarms, data.alarm]); // update local state
     } catch (error) {
       console.error("Error adding alarm:", error);
