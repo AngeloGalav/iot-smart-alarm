@@ -58,7 +58,7 @@ const Hero = () => {
     <div className="flex-grow container mx-auto p-4">
       <nav className="my-navbar m-1">
       <div>
-      <h1 className="text-3xl font-bold">Alarm Manager</h1>
+      <h1 className="text-3xl font-bold">alarm-thingy Manager</h1>
       </div>
       <div className="grid gap-4 grid-cols-4">
       <button className="btn btn-accent col-span-2" onClick={addAlarm}>
