@@ -82,6 +82,8 @@ python backend/server.py
 
 Aaaand... you're done! Enjoy your smart alarm experience!
 
+To view the Grafana dashboards, navigate to `localhost:3001`, and for the Web App, visit `localhost:3000`.
+
 ## Accuracy script
 To run the accuracy script, make sure that the InfluxDB instance is up and running. Then, simply use the script in this way:
 ```
