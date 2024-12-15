@@ -1,0 +1,27 @@
+{
+    "id": null,
+    "uid": "iot-dashboard-full",
+    "title": "IoT Dashboard Full",
+    "tags": [],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 0,
+    "refresh": "5s",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "IoT Alarm Graph (10h)",
+        "targets": [
+          {
+            "query": "from(bucket: \"iot-bucket\") |> range(start: -10h)"
+          }
+        ],
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 9
+        }
+      }
+    ]
+}
