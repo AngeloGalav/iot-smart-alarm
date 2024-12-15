@@ -1,13 +1,13 @@
 """
 Telegram bot which allows to be run etc...
 """
-
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, Updater, CommandHandler, CallbackContext, Application, ContextTypes
 import requests
 from telegram_secrets import TELEGRAM_BOT_TOKEN
 import os
+import re
 
 backend_host = os.getenv("BACKEND_HOST", "localhost")
 backend_port = os.getenv("BACKEND_PORT", "5000")
@@ -17,6 +17,12 @@ BACKEND_URL = f"http://localhost:5000"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def is_valid_time_format(time_str):
+    match = re.match(r"^([01]?\d|2[0-3]):([0-5]?\d)$", time_str)
+    if match:
+        return True
+    return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Hello! I'm your Alarm Bot. Here are the commands you can use:\n"
@@ -30,24 +36,66 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def add_alarm(update: Update, context: CallbackContext):
     try:
         args = context.args
-        if len(args) < 2:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Usage: /add_alarm HH:MM weekdays (e.g., /add_alarm 07:30 1,2,3)")
+
+        if len(args) < 1:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Usage: /add_alarm HH:MM [weekdays (optional)]\n"
+                     "e.g., /add_alarm 07:30 1,2,3\n"
+                     "If no weekdays are provided, the alarm will be set for all days."
+            )
             return
 
+        # if provided, check that format time is right using a regular expr.
         time = args[0]
-        weekdays = args[1].split(",") if len(args) > 1 else []
+        if not is_valid_time_format(time):
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Invalid time format. Please provide a valid time in HH:MM format (e.g., 07:30)."
+            )
+            return
 
+        # if provided, check weekdays sanity
+        weekdays = []
+        if len(args) > 1:
+            weekdays_str = args[1].split(",")
+            try:
+                weekdays = [int(day) for day in weekdays_str]
+                if any(day < 1 or day > 7 for day in weekdays):
+                    raise ValueError("Weekdays must be numbers from 1 to 7.")
+                if len(set(weekdays)) != len(weekdays):
+                    raise ValueError("Weekdays must not contain duplicates.")
+
+                weekdays = [day - 1 for day in weekdays]
+
+            except ValueError as e:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"Invalid weekdays: {e}. Please use numbers from 1 to 7 without duplicates."
+                )
+                return
+
+        # send data to server
         payload = {"time": time, "weekdays": weekdays}
         response = requests.post(f"{BACKEND_URL}/alarms", json=payload)
 
         if response.status_code == 201:
             alarm = response.json()["alarm"]
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Alarm added successfully! ID: {alarm['id']}, Time: {alarm['time']}")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"Alarm added successfully!\nID: {alarm['id']}\nTime: {alarm['time']}\nWeekdays: {', '.join(map(str, [day + 1 for day in alarm['weekdays']]))}"
+            )
         else:
-            await context.bot.send_message(chat_id=update.effective_chat.id,text=f"Error adding alarm: {response.json().get('message', 'Unknown error')}")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"Error adding alarm: {response.json().get('message', 'Unknown error')}"
+            )
     except Exception as e:
         logger.error(f"Error in add_alarm: {e}")
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="An error occurred while adding the alarm.")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="An error occurred while adding the alarm."
+        )
 
 async def delete_alarm(update: Update, context: CallbackContext):
     try:
@@ -70,6 +118,7 @@ async def delete_alarm(update: Update, context: CallbackContext):
 async def update_alarm(update: Update, context: CallbackContext):
     try:
         args = context.args
+
         if len(args) < 2:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -78,19 +127,51 @@ async def update_alarm(update: Update, context: CallbackContext):
             )
             return
 
-        alarm_id = int(args[0])
+        # parse alarm id
+        try:
+            alarm_id = int(args[0])
+        except ValueError:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Invalid alarm ID. Please provide a valid numeric alarm ID."
+            )
+            return
+
         payload = {}
 
-        # Parse time if provided
-        if len(args) > 1 and ":" in args[1]:  # Check if second argument is time
-            payload["time"] = args[1]
+        # check if time is correct format
+        if len(args) > 1 and ":" in args[1]: # allow only weekdays change if input is not time
+            time = args[1]
+            if not is_valid_time_format(time):
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="Invalid time format. Please provide a valid time in HH:MM format (e.g., 07:30)."
+                )
+                return
+            payload["time"] = time
 
-        # Parse weekdays if provided
+        # check if time is correct format
         if len(args) > 2:
-            weekdays = args[2].split(",")
-            payload["weekdays"] = weekdays
+            weekdays_str = args[2].split(",")
+            try:
+                weekdays = [int(day) for day in weekdays_str]
+                if any(day < 1 or day > 7 for day in weekdays):
+                    raise ValueError("Weekdays must be numbers from 1 to 7.")
+                if len(set(weekdays)) != len(weekdays):
+                    raise ValueError("Weekdays must not contain duplicates.")
 
-        # Ensure at least one field is being updated
+                # Convert weekdays from 1-7 to 0-6 for the backend
+                weekdays = [day - 1 for day in weekdays]
+                payload["weekdays"] = weekdays
+
+            except ValueError as e:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"Invalid weekdays: {e}. Please use numbers from 1 to 7 without duplicates."
+                )
+                return
+
+        # ensure at least one field is being updated
         if not payload:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -98,6 +179,7 @@ async def update_alarm(update: Update, context: CallbackContext):
             )
             return
 
+        # send the update request to the backend
         response = requests.put(f"{BACKEND_URL}/alarms/{alarm_id}", json=payload)
 
         if response.status_code == 200:
@@ -138,7 +220,7 @@ async def list_alarms(update: Update, context: CallbackContext):
             if alarms:
                 message = "Current Alarms:\n"
                 for alarm in alarms:
-                    message += f"ID: {alarm['id']}, Time: {alarm['time']}, Weekdays: {','.join(map(str, alarm['weekdays']))}, Active: {alarm['active']}\n"
+                    message += f"ID: {alarm['id']}, Time: {alarm['time']}, Weekdays: [{','.join(map(str, alarm['weekdays']))}], Active: {alarm['active']}\n"
                 await context.bot.send_message(chat_id=update.effective_chat.id,text=message)
             else:
                 await context.bot.send_message(chat_id=update.effective_chat.id,text="No alarms set.")
