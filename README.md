@@ -23,9 +23,9 @@ Here are some of the features of this project:
 
 More information can be found in the `docs/report.pdf` file.
 
-Click the following link to watch a video demo of the projects features:
+Click the following link to watch a video demo of the project's features:
 [![Watch the video](https://img.youtube.com/vi/afLa9XW69rA/maxresdefault.jpg)](https://www.youtube.com/watch?v=afLa9XW69rA)
-(Ignore my thick accent/bad english in the video, I was really tired. I swear I speak much better normally)
+(Please, ignore my thick accent/bad english in the video, I was really tired. I swear I speak much better normally)
 
 ----
 ## Setup instructions
