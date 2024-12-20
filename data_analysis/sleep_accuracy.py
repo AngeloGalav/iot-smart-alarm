@@ -80,6 +80,7 @@ def main():
     sensor_total_sleep = get_total_sleep_time(client, bucket, org, time=args.time)
 
     if sensor_total_sleep is not None:
+        # compute using the percentage accuracy expression
         accuracy = 100 - (np.abs(sensor_total_sleep - args.ground_truth) / args.ground_truth * 100)
         print(f"Total Sensor Sleep Duration: {sensor_total_sleep:.2f} hours")
         print(f"Accuracy of the sensor compared to ground truth: {accuracy:.2f}%")

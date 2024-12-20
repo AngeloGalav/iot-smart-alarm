@@ -398,4 +398,4 @@ if __name__ == '__main__':
     alarm_thread.start()
 
     # start Flask app/backend server
-    app.run(host="0.0.0.0", port=FLASK_APP_PORT)
+    app.run(host="0.0.0.0", port=FLASK_APP_PORT, threaded=True)

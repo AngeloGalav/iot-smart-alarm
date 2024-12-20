@@ -49,12 +49,6 @@ INFLUXDB_BUCKET = os.getenv("DOCKER_INFLUXDB_INIT_BUCKET", "iot-bucket")
 INFLUXDB_TOKEN = influxdb_api_token
 INFLUXDB_ORG = os.getenv("DOCKER_INFLUXDB_INIT_ORG", "iot-org")
 
-# flags
-alarm_triggered = False
-alarm_filename = "alarms.json"
-alarms = []
-latest_alarm_id = 0
-
 # connect to InfluxDB
 influx_client = InfluxDBClient(
     url=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
@@ -65,7 +59,6 @@ write_api = influx_client.write_api(write_options=WriteOptions(batch_size=1))
 
 # CumAvg of sleeping time
 total_sleep_time_sum = 0
-
 
 days_count = 0
 current_day = datetime.now().date()
@@ -261,6 +254,6 @@ if __name__ == '__main__':
     mqtt.init_app(app)
 
     # Start Flask app/backend server
-    app.run(host="0.0.0.0", port=FLASK_APP_PORT)
+    app.run(host="0.0.0.0", port=FLASK_APP_PORT, threaded=True)
 
 
